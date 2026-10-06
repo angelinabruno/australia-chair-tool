@@ -24,8 +24,8 @@ Sys.setenv(DASHBOARD_DIR = normalizePath(DASHBOARD_DIR, winslash = "/"))
   "1e. Energy.R",
   "1f. Trade.R",
   "1g. Migration.R",
-  # "1h. Patents.R",           # ~30 min. Remove the # to refresh patent data
-                               # (IP RAPID updates weekly; quarterly is plenty).
+  "1h. Patents.R",             # the slowest: downloads a ~1.3 GB zip from IP RAPID
+                               # (reused for 30 days). Put # in front to skip it.
   "1i. Investment.R"
 )
 
