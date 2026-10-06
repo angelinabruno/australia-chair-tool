@@ -32,7 +32,22 @@ library(scales)
 library(forcats)
 library(readr)
 
-path <- "table-o-electricity-generation-by-fuel type-2024-25-and-2025.xlsx"
+# Table O is downloaded the first time and reused after that. DCCEEW publishes
+# a new edition each June at a new address: when it does, paste the new .xlsx
+# link (from the Table O page linked above) into TABLE_O_URL, and update the
+# years in the chart titles and the validation figures below.
+TABLE_O_URL <- paste0("https://www.energy.gov.au/sites/default/files/2026-06/",
+                      "table-o-electricity-generation-by-fuel%20type-2024-25-and-2025.xlsx")
+path <- utils::URLdecode(basename(TABLE_O_URL))
+
+if (!file.exists(path)) {
+  message("Downloading ", path)
+  httr2::request(TABLE_O_URL) |>
+    httr2::req_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)") |>   # site blocks requests without one
+    httr2::req_timeout(120) |>
+    httr2::req_retry(max_tries = 3) |>
+    httr2::req_perform(path = path)
+}
 stopifnot(file.exists(path))
 
 
