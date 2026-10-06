@@ -74,8 +74,7 @@ SRC <- paste("Source: ABS, Private New Capital Expenditure and Expected",
              "Expenditure, Australia (cat. 5625.0).")
 
 save_csis <- function(plot, file, width = 9, height = 5.5) {
-  dir.create("output", showWarnings = FALSE)
-  ggsave(file.path("output", file), plot,
+  ggsave(file, plot,
          width = width, height = height, dpi = 300, bg = "white")
 }
 

@@ -13,7 +13,7 @@ setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Investment"))
 #
 # One click: downloads the latest Tables-all.zip from the ABS, extracts the two
 # tables, finds the total level of investment for the latest year and draws
-# Investment/Foreign investment/iip_levels_latest.png for the dashboard. No files are prepared by hand.
+# Investment/iip_levels_latest.png for the dashboard. No files are prepared by hand.
 #
 # The ABS publishes this once a year (early May, for the previous calendar
 # year). The script looks for the newest release itself, so it does not need
@@ -27,8 +27,8 @@ library(ggplot2)
 library(scales)
 
 DASHBOARD_DIR <- Sys.getenv("DASHBOARD_DIR")
-RAW_DIR <- file.path(DASHBOARD_DIR, "Investment", "Foreign investment", "raw")   # downloads (not for GitHub)
-OUT_DIR <- file.path(DASHBOARD_DIR, "Investment", "Foreign investment")
+RAW_DIR <- file.path(DASHBOARD_DIR, "Investment", "raw")   # downloads (not for GitHub)
+OUT_DIR <- file.path(DASHBOARD_DIR, "Investment")
 dir.create(RAW_DIR, showWarnings = FALSE, recursive = TRUE)
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 

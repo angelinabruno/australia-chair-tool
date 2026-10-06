@@ -331,7 +331,7 @@ if (length(svc_files) == 0) {
 
 ## Row
 
-![](<Investment/Foreign investment/iip_levels_latest.png>){title="International investment position"}
+![](<Investment/iip_levels_latest.png>){title="International investment position"}
 
 
 # Data centres {orientation="columns"}
@@ -340,41 +340,41 @@ if (length(svc_files) == 0) {
 
 ### Investment by asset
 
-![](<Data centres/output/01_divj_by_asset.png>){title="Investment by asset"}
+![](<Data centres/01_divj_by_asset.png>){title="Investment by asset"}
 
 ### Share of national capex
 
-![](<Data centres/output/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
+![](<Data centres/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
 
 ### Investment by financial year
 
-![](<Data centres/output/08_divj_financial_year.png>){title="Capital expenditure by financial year"}
+![](<Data centres/08_divj_financial_year.png>){title="Capital expenditure by financial year"}
 
 ### Real building capex
 
-![](<Data centres/output/09_real_momentum.png>){title="Real building and structures capex"}
+![](<Data centres/09_real_momentum.png>){title="Real building and structures capex"}
 
 ## Column {.tabset width="50%"}
 
 ### EPM by industry
 
-![](<Data centres/output/03_epm_actual_by_industry.png>){title="EPM by industry"}
+![](<Data centres/03_epm_actual_by_industry.png>){title="EPM by industry"}
 
 ### Expected EPM by industry
 
-![](<Data centres/output/04_epm_expected_by_industry.png>){title="Expected EPM by industry"}
+![](<Data centres/04_epm_expected_by_industry.png>){title="Expected EPM by industry"}
 
 ### Actual vs expected, total
 
-![](<Data centres/output/05_actual_vs_expected_bs_total.png>){title="Actual vs expected capex, buildings and structures"}
+![](<Data centres/05_actual_vs_expected_bs_total.png>){title="Actual vs expected capex, buildings and structures"}
 
 ### Actual vs expected, EPM
 
-![](<Data centres/output/06_actual_vs_expected_epm_divj.png>){title="Actual vs expected capex, equipment"}
+![](<Data centres/06_actual_vs_expected_epm_divj.png>){title="Actual vs expected capex, equipment"}
 
 ### Realisation ratio
 
-![](<Data centres/output/07_realisation_ratio_divj_epm.png>){title="Realisation ratio"}
+![](<Data centres/07_realisation_ratio_divj_epm.png>){title="Realisation ratio"}
 
 
 # Critical minerals

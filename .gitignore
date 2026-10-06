@@ -32,8 +32,6 @@ Minerals/**
 !Patents/
 !Tech/
 !Investment/
-!Data centres/output/
-!Investment/Foreign investment/
 
 # ...then add back the charts the dashboard uses
 !Overview/US-Australia distance map.png
@@ -45,7 +43,7 @@ Minerals/**
 !Economy/gdp_index_au_us.png
 !Economy/productivity_au_us.png
 !Economy/gva_level_industry.png
-!Investment/Foreign investment/iip_levels_latest.png
+!Investment/iip_levels_latest.png
 !Trade/abs_services_balance.png
 !Trade/dfat_*.png
 !Trade/overview_us_share_by_service.png
@@ -55,15 +53,15 @@ Minerals/**
 !Trade/goods_imports_*.png
 !Trade/credits_*.png
 !Trade/debits_*.png
-!Data centres/output/01_divj_by_asset.png
-!Data centres/output/02_divj_share.png
-!Data centres/output/03_epm_actual_by_industry.png
-!Data centres/output/04_epm_expected_by_industry.png
-!Data centres/output/05_actual_vs_expected_bs_total.png
-!Data centres/output/06_actual_vs_expected_epm_divj.png
-!Data centres/output/07_realisation_ratio_divj_epm.png
-!Data centres/output/08_divj_financial_year.png
-!Data centres/output/09_real_momentum.png
+!Data centres/01_divj_by_asset.png
+!Data centres/02_divj_share.png
+!Data centres/03_epm_actual_by_industry.png
+!Data centres/04_epm_expected_by_industry.png
+!Data centres/05_actual_vs_expected_bs_total.png
+!Data centres/06_actual_vs_expected_epm_divj.png
+!Data centres/07_realisation_ratio_divj_epm.png
+!Data centres/08_divj_financial_year.png
+!Data centres/09_real_momentum.png
 !Energy/0*.png
 !Migration/nom_usa_national.png
 !Migration/nom_usa_states.png
