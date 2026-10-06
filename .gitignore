@@ -1,0 +1,72 @@
+# Only the source and the charts the dashboard uses are tracked.
+# Everything in the chart folders is ignored, then the charts that
+# '2. Australia Chair Tool.qmd' loads are added back below.
+
+# Rendered dashboards, R session files, old material
+*.html
+*.pptx
+.Rhistory
+.RData
+.Rproj.user/
+Archive/
+*_files/
+.quarto/
+
+# Chart folders: ignore all contents...
+Overview/**
+Economy/**
+Trade/**
+Data centres/**
+Energy/**
+Migration/**
+Patents/**
+Tech/**
+Investment/**
+Minerals/**
+!Overview/
+!Economy/
+!Trade/
+!Data centres/
+!Energy/
+!Migration/
+!Patents/
+!Tech/
+!Investment/
+!Data centres/output/
+!Investment/Foreign investment/
+
+# ...then add back the charts the dashboard uses
+!Overview/US-Australia distance map.png
+!Overview/australia_over_us.png
+!Economy/au_vs_us_states.png
+!Economy/au_us_size.png
+!Economy/oecd_gdp_rank_australia.png
+!Economy/gdp_growth_au_us.png
+!Economy/gdp_index_au_us.png
+!Economy/productivity_au_us.png
+!Economy/gva_level_industry.png
+!Investment/Foreign investment/iip_levels_latest.png
+!Trade/abs_services_balance.png
+!Trade/dfat_*.png
+!Trade/overview_us_share_by_service.png
+!Trade/goods_vs_services_us_share.png
+!Trade/services_imports_us.png
+!Trade/goods_exports_*.png
+!Trade/goods_imports_*.png
+!Trade/credits_*.png
+!Trade/debits_*.png
+!Data centres/output/01_divj_by_asset.png
+!Data centres/output/02_divj_share.png
+!Data centres/output/03_epm_actual_by_industry.png
+!Data centres/output/04_epm_expected_by_industry.png
+!Data centres/output/05_actual_vs_expected_bs_total.png
+!Data centres/output/06_actual_vs_expected_epm_divj.png
+!Data centres/output/07_realisation_ratio_divj_epm.png
+!Data centres/output/08_divj_financial_year.png
+!Data centres/output/09_real_momentum.png
+!Energy/0*.png
+!Migration/nom_usa_national.png
+!Migration/nom_usa_states.png
+!Patents/us_*.png
+!Patents/tm_*.png
+!Tech/[A-F]_*.png

@@ -1,0 +1,600 @@
+---
+title: "Australia Chair Tool"
+format:
+  dashboard:
+    theme: cosmo
+    embed-resources: true
+    nav-buttons: [github]
+    scrolling: false
+---
+
+# Overview
+
+## Row {height="24%"}
+
+::: {.card .landing-card}
+```{r}
+#| echo: false
+#| output: asis
+# The "Last updated" date is the day the dashboard was rendered.
+cat(paste0(
+  '<div class="landing">',
+  '<h1 class="landing-title">Australia and the United States</h1>',
+  '<div class="landing-copy">',
+  '<p class="landing-lede">an interactive tool that maps the full breadth of the U.S.-Australia economic and strategic relationship, spanning trade, investment, critical minerals, energy, migration, IP collaboration and critical technologies.</p>',
+  '<p class="landing-meta">Last updated ', trimws(format(Sys.Date(), "%e %B %Y")),
+  '. Updated quarterly. Sources: ABS, DFAT, US Bureau of Economic Analysis, Geoscience Australia, IP Australia, OpenAlex, ADHA and DCCEEW.</p>',
+  '</div>',
+  '</div>'
+))
+```
+:::
+
+## Row {height="76%"}
+
+### Column {width="50%"}
+
+![](<Overview/US-Australia distance map.png>){title="Distance between Australia and the United States"}
+
+### Column {width="50%"}
+
+![](Overview/australia_over_us.png){title="Australia vs. US states"}
+
+
+# Economy {orientation="columns"}
+
+## Column {.tabset width="50%"}
+
+### Australia vs. US states
+
+![](<Economy/au_vs_us_states.png>){title="Australia vs. US states"}
+
+### Relative size
+
+![](<Economy/au_us_size.png>){title="Relative economy size"}
+
+### OECD comparison
+
+![](<Economy/oecd_gdp_rank_australia.png>){title="OECD comparison"}
+
+## Column {.tabset width="50%"}
+
+### GDP growth
+
+![](<Economy/gdp_growth_au_us.png>){title="GDP growth, AU vs US"}
+
+### GDP index
+
+![](<Economy/gdp_index_au_us.png>){title="Real GDP index, AU vs US"}
+
+### Productivity
+
+![](<Economy/productivity_au_us.png>){title="Productivity, AU vs US"}
+
+### Industry composition
+
+![](Economy/gva_level_industry.png){title="Industry composition"}
+
+
+# Trade overview {orientation="columns"}
+
+## Column {.tabset width="50%"}
+
+### Exports by partner
+
+![](Trade/dfat_exports_partners_long.png){title="Exports by trading partner"}
+
+### Imports by partner
+
+![](Trade/dfat_imports_partners_long.png){title="Imports by trading partner"}
+
+### Exports by sector
+
+![](Trade/dfat_sector_composition_both.png){title="Exports by sector"}
+
+### Imports by sector
+
+![](Trade/dfat_import_shares_by_sector.png){title="Imports by sector"}
+
+## Column {.tabset width="50%"}
+
+### US share: goods vs services
+
+![](Trade/goods_vs_services_us_share.png){title="US share of Australia's trade, goods vs services"}
+
+### Services imports by partner
+
+![](Trade/services_imports_us.png){title="Services imports by source country"}
+
+### Services trade balance
+
+![](Trade/abs_services_balance.png){title="Services trade balance"}
+
+
+# Trade in goods
+
+## Column
+
+```{r}
+#| title: "Goods trade by product with the US"
+#| echo: false
+#| output: asis
+#| padding: 0
+
+# Every chart in Trade/ named goods_exports_<div>_<code>_<label>.png
+# (or goods_imports_...) is picked up automatically, so new charts appear
+# in the dropdown without editing this file.
+files <- list.files("Trade", pattern = "^goods_(exports|imports)_[0-9]+_.*\\.png$")
+
+if (length(files) == 0) {
+  cat("<p style='color:#5E6B78'>No goods charts found in the Trade folder.</p>")
+} else {
+  flow  <- sub("^goods_(exports|imports)_.*$", "\\1", files)
+  rest  <- sub("^goods_(exports|imports)_", "", sub("\\.png$", "", files))
+  parts <- strsplit(rest, "_")
+
+  division <- vapply(parts, function(p) p[1], character(1))
+  code     <- vapply(parts, function(p) p[2], character(1))
+  label    <- vapply(parts, function(p) paste(p[-(1:2)], collapse = " "), character(1))
+  label    <- paste0(toupper(substring(label, 1, 1)), substring(label, 2))
+  id       <- paste(division, code, sep = "-")
+
+  ord   <- order(division, code)
+  items <- unique(data.frame(division, code, id, label,
+                             stringsAsFactors = FALSE)[ord, ])
+
+  opts <- vapply(split(items, items$division), function(d) {
+    paste0("<optgroup label=\"Division ", d$division[1], "\">",
+           paste0("<option value=\"", d$id, "\">", d$code, " - ", d$label,
+                  "</option>", collapse = ""),
+           "</optgroup>")
+  }, character(1))
+
+  imgs <- paste0("<img src=\"Trade/", files, "\" data-flow=\"", flow,
+                 "\" data-id=\"", id, "\" loading=\"lazy\" alt=\"",
+                 flow, ": ", label, "\">", collapse = "")
+
+  flows  <- intersect(c("exports", "imports"), unique(flow))
+  names(flows) <- c(exports = "Exports", imports = "Imports")[flows]
+  toggle <- if (length(flows) > 1) {
+    paste0("<div class=\"svc-toggle\" role=\"group\" aria-label=\"Direction of trade\">",
+           paste0("<button type=\"button\" data-flow=\"", flows, "\"",
+                  ifelse(seq_along(flows) == 1, " class=\"is-on\"", ""), ">",
+                  names(flows), "</button>", collapse = ""),
+           "</div>")
+  } else ""
+
+  cat(paste0(
+    "<div class=\"svc-picker goods-picker\">",
+    "<style>",
+    ".goods-picker .svc-filter{font:inherit;font-size:0.84rem;color:#1C2530;",
+    "border:1px solid #DDE1E6;border-radius:6px;padding:0.35rem 0.6rem;",
+    "background:#FFFFFF;min-width:11rem;flex:1 1 11rem;}",
+    ".goods-picker .svc-select{min-width:18rem;flex:2 1 18rem;}",
+    ".goods-picker .svc-count{font-size:0.75rem;color:#5E6B78;}",
+    "</style>",
+    "<div class=\"svc-toolbar\">", toggle,
+    "<input type=\"search\" class=\"svc-filter\" placeholder=\"Filter products\" ",
+    "aria-label=\"Filter products\">",
+    "<select class=\"svc-select\" aria-label=\"Product\">",
+    paste0(opts, collapse = ""), "</select>",
+    "<span class=\"svc-count\"></span>",
+    "</div>",
+    "<div class=\"svc-stage\">", imgs, "</div>",
+    "</div>",
+    "<script>",
+    "(function(){",
+    "var root=document.querySelector('.goods-picker');",
+    "var select=root.querySelector('.svc-select');",
+    "var filter=root.querySelector('.svc-filter');",
+    "var count=root.querySelector('.svc-count');",
+    "var buttons=root.querySelectorAll('.svc-toggle button');",
+    "var imgs=root.querySelectorAll('.svc-stage img');",
+    "var flow=buttons.length?buttons[0].dataset.flow:imgs[0].dataset.flow;",
+    "var all=[];",
+    "root.querySelectorAll('.svc-select optgroup').forEach(function(g){",
+    "g.querySelectorAll('option').forEach(function(o){",
+    "all.push({group:g.label,value:o.value,text:o.textContent});});});",
+    "function show(){imgs.forEach(function(img){",
+    "img.classList.toggle('is-on',img.dataset.flow===flow&&img.dataset.id===select.value);});}",
+    "function rebuild(){var q=filter.value.trim().toLowerCase();",
+    "var keep=all.filter(function(i){return !q||i.text.toLowerCase().indexOf(q)>-1;});",
+    "var current=select.value;var html='';var group=null;",
+    "keep.forEach(function(i){if(i.group!==group){if(group!==null){html+='</optgroup>';}",
+    "html+='<optgroup label=\"'+i.group+'\">';group=i.group;}",
+    "html+='<option value=\"'+i.value+'\">'+i.text+'</option>';});",
+    "if(group!==null){html+='</optgroup>';}",
+    "select.innerHTML=html;",
+    "if(keep.some(function(i){return i.value===current;})){select.value=current;}",
+    "count.textContent=keep.length+' of '+all.length;show();}",
+    "buttons.forEach(function(b){b.addEventListener('click',function(){",
+    "flow=b.dataset.flow;buttons.forEach(function(x){x.classList.toggle('is-on',x===b);});show();});});",
+    "select.addEventListener('change',show);",
+    "filter.addEventListener('input',rebuild);",
+    "rebuild();})();",
+    "</script>"
+  ))
+}
+```
+
+# Trade in services {orientation="columns"}
+
+## Column {width="55%"}
+
+![](Trade/overview_us_share_by_service.png){title="US share of Australia's services trade, by service"}
+
+## Column {width="45%"}
+
+```{r}
+#| title: "Services trade by type and partner"
+#| echo: false
+#| output: asis
+#| padding: 0
+
+# Every chart in Trade/ named credits_<NN>_<label>.png (exports) or
+# debits_<NN>_<label>.png (imports) is picked up automatically, so renamed
+# or new service charts appear without editing this file.
+svc_files <- list.files("Trade", pattern = "^(credits|debits)_[0-9]{2}_.*\\.png$")
+
+# Short names for the dropdown, by ABS service number.
+svc_names <- c(
+  "13" = "Total services",
+  "01" = "Manufacturing on others' inputs",
+  "02" = "Maintenance and repair",
+  "03" = "Transport",
+  "04" = "Travel",
+  "05" = "Construction",
+  "06" = "Insurance and pensions",
+  "07" = "Financial services",
+  "08" = "Intellectual property charges",
+  "09" = "Telecom, computer and information",
+  "10" = "Other business services",
+  "11" = "Personal, cultural and recreational",
+  "12" = "Government goods and services"
+)
+
+if (length(svc_files) == 0) {
+  cat("<p style='color:#5E6B78'>No services charts found in the Trade folder.</p>")
+} else {
+  svc_flow <- sub("^(credits|debits)_.*$", "\\1", svc_files)
+  svc_idx  <- sub("^(credits|debits)_([0-9]{2})_.*$", "\\2", svc_files)
+
+  # Totals first, then in ABS order; any number without a short name uses its file label.
+  idx_all <- unique(svc_idx)
+  idx_all <- idx_all[order(idx_all != "13", idx_all)]
+  label_of <- function(i) {
+    if (!is.na(svc_names[i])) return(unname(svc_names[i]))
+    f <- svc_files[svc_idx == i][1]
+    l <- gsub("_", " ", sub("^(credits|debits)_[0-9]{2}_", "", sub("\\.png$", "", f)))
+    paste0(toupper(substring(l, 1, 1)), substring(l, 2))
+  }
+  opts <- paste0("<option value=\"", idx_all, "\">", vapply(idx_all, label_of, ""),
+                 "</option>", collapse = "")
+
+  flow_name <- c(credits = "Exports", debits = "Imports")
+  imgs <- paste0("<img src=\"Trade/", svc_files, "\" data-flow=\"", svc_flow,
+                 "\" data-idx=\"", svc_idx, "\" loading=\"lazy\" alt=\"",
+                 flow_name[svc_flow], ": ", vapply(svc_idx, label_of, ""), "\">",
+                 collapse = "")
+
+  cat(paste0(
+    "<div class=\"svc-picker services-picker\">",
+    "<style>",
+    ".svc-picker{display:flex;flex-direction:column;height:100%;min-height:0;gap:0.6rem;}",
+    ".svc-toolbar{display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;justify-content:space-between;}",
+    ".svc-toggle{display:inline-flex;border:1px solid #DDE1E6;border-radius:6px;overflow:hidden;}",
+    ".svc-toggle button{border:none;background:#FFFFFF;color:#5E6B78;font:inherit;font-size:0.84rem;font-weight:500;padding:0.35rem 0.8rem;cursor:pointer;}",
+    ".svc-toggle button+button{border-left:1px solid #DDE1E6;}",
+    ".svc-toggle button.is-on{background:#0B1F3A;color:#FFFFFF;}",
+    ".svc-toggle button:focus-visible,.svc-select:focus-visible{outline:2px solid #D6A02A;outline-offset:2px;}",
+    ".svc-select{font:inherit;font-size:0.84rem;color:#1C2530;border:1px solid #DDE1E6;border-radius:6px;padding:0.35rem 0.6rem;background:#FFFFFF;min-width:15rem;max-width:100%;}",
+    ".svc-stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;}",
+    ".svc-stage img{display:none;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;}",
+    ".svc-stage img.is-on{display:block;}",
+    ".svc-empty{display:none;font-size:0.84rem;color:#5E6B78;}",
+    ".svc-empty.is-on{display:block;}",
+    "</style>",
+    "<div class=\"svc-toolbar\">",
+    "<div class=\"svc-toggle\" role=\"group\" aria-label=\"Direction of trade\">",
+    "<button type=\"button\" data-flow=\"credits\" class=\"is-on\" aria-pressed=\"true\">Exports (credits)</button>",
+    "<button type=\"button\" data-flow=\"debits\" aria-pressed=\"false\">Imports (debits)</button>",
+    "</div>",
+    "<select class=\"svc-select\" aria-label=\"Type of service\">", opts, "</select>",
+    "</div>",
+    "<div class=\"svc-stage\">", imgs,
+    "<p class=\"svc-empty\">No chart for this service in this direction.</p>",
+    "</div>",
+    "</div>",
+    "<script>",
+    "(function(){",
+    "var root=document.querySelector('.services-picker');",
+    "var flow='credits';",
+    "var select=root.querySelector('.svc-select');",
+    "var buttons=root.querySelectorAll('.svc-toggle button');",
+    "var imgs=root.querySelectorAll('.svc-stage img');",
+    "var empty=root.querySelector('.svc-empty');",
+    "function show(){var any=false;imgs.forEach(function(img){",
+    "var on=img.dataset.flow===flow&&img.dataset.idx===select.value;",
+    "img.classList.toggle('is-on',on);if(on){any=true;}});",
+    "empty.classList.toggle('is-on',!any);}",
+    "buttons.forEach(function(b){b.addEventListener('click',function(){",
+    "flow=b.dataset.flow;buttons.forEach(function(x){x.classList.toggle('is-on',x===b);",
+    "x.setAttribute('aria-pressed',x===b);});show();});});",
+    "select.addEventListener('change',show);",
+    "show();})();",
+    "</script>"
+  ))
+}
+```
+
+# Foreign investment
+
+## Row
+
+![](<Investment/Foreign investment/iip_levels_latest.png>){title="International investment position"}
+
+
+# Data centres {orientation="columns"}
+
+## Column {.tabset width="50%"}
+
+### Investment by asset
+
+![](<Data centres/output/01_divj_by_asset.png>){title="Investment by asset"}
+
+### Share of national capex
+
+![](<Data centres/output/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
+
+### Investment by financial year
+
+![](<Data centres/output/08_divj_financial_year.png>){title="Capital expenditure by financial year"}
+
+### Real building capex
+
+![](<Data centres/output/09_real_momentum.png>){title="Real building and structures capex"}
+
+## Column {.tabset width="50%"}
+
+### EPM by industry
+
+![](<Data centres/output/03_epm_actual_by_industry.png>){title="EPM by industry"}
+
+### Expected EPM by industry
+
+![](<Data centres/output/04_epm_expected_by_industry.png>){title="Expected EPM by industry"}
+
+### Actual vs expected, total
+
+![](<Data centres/output/05_actual_vs_expected_bs_total.png>){title="Actual vs expected capex, buildings and structures"}
+
+### Actual vs expected, EPM
+
+![](<Data centres/output/06_actual_vs_expected_epm_divj.png>){title="Actual vs expected capex, equipment"}
+
+### Realisation ratio
+
+![](<Data centres/output/07_realisation_ratio_divj_epm.png>){title="Realisation ratio"}
+
+
+# Critical minerals
+
+```{r}
+#| include: false
+library(readxl); library(dplyr); library(leaflet); library(crosstalk); library(htmltools)
+
+data_url  <- "https://d28rz98at9flks.cloudfront.net/150802/150802_01_0.xlsx"
+xlsx_path <- tempfile(fileext = ".xlsx")
+download.file(data_url, xlsx_path, mode = "wb")
+
+mines <- read_excel(xlsx_path, sheet = "CM Mines and Deposits 2025", skip = 12) |>
+  filter(!is.na(Name), !is.na(Latitude), !is.na(Longitude))
+
+family_of <- c(
+  "Antimony" = "Electronics & semiconductors",
+  "Bismuth +/- Cobalt +/- Indium" = "Electronics & semiconductors",
+  "Chromium +/- Cobalt +/- PGE +/- Nickel" = "Alloy & superalloy metals",
+  "Cobalt" = "Battery & energy storage",
+  "Fluorine" = "Electronics & semiconductors",
+  "Graphite" = "Battery & energy storage",
+  "Heavy mineral sands - Titanium, Zirconium" = "Mineral sands (titanium & zirconium)",
+  "Heavy mineral sands - Titanium, Zirconium, REE" = "Mineral sands (titanium & zirconium)",
+  "High Purity Alumina" = "Electronics & semiconductors",
+  "Indium" = "Electronics & semiconductors",
+  "Lithium +/- Tantalum +/- Niobium" = "Battery & energy storage",
+  "Magnesium" = "Alloy & superalloy metals",
+  "Manganese Ore" = "Battery & energy storage",
+  "Molybdenum +/- Rhenium" = "Alloy & superalloy metals",
+  "Nickel +/- Cobalt +/- PGE" = "Battery & energy storage",
+  "Platinum Group Elements (PGE) +/- Cobalt +/- Nickel" = "Platinum group & catalysts",
+  "REE, Niobium +/- Zirconium, Hafnium, Tantalum, Gallium" = "Rare earths & magnet metals",
+  "Rare Earth Elements (REE)" = "Rare earths & magnet metals",
+  "Scandium +/- Cobalt +/- PGE +/- Nickel" = "Rare earths & magnet metals",
+  "Silicon (High purity silica/quartz)" = "Electronics & semiconductors",
+  "Titanium" = "Mineral sands (titanium & zirconium)",
+  "Titanium, Vanadium" = "Mineral sands (titanium & zirconium)",
+  "Tungsten" = "Alloy & superalloy metals",
+  "Tungsten, Molybdenum" = "Alloy & superalloy metals",
+  "Vanadium" = "Battery & energy storage",
+  "Vanadium +/- REE +/- Gallium" = "Battery & energy storage",
+  "Vanadium, Molybdenum" = "Battery & energy storage"
+)
+mines$Family <- unname(family_of[mines$`Commodity Group`])
+mines$Family[is.na(mines$Family)] <- "Other"
+
+status_levels <- c("Mineral deposit", "Mine - under development",
+                   "Operating mine", "Mine - care and maintenance")
+pal <- colorFactor(c("#5b8bd0", "#e0a020", "#2a9d5c", "#d13b3b"), status_levels)
+
+mines <- mines |>
+  mutate(Status = factor(Status, status_levels),
+         popup = paste0("<b>", Name, "</b><br>", `Commodity Group`,
+                        "<br>Family: ", Family,
+                        "<br>Status: ", Status, "<br>State: ", State))
+
+sd <- SharedData$new(mines)
+filter_family <- filter_select("family", "End-use family", sd, ~Family, multiple = TRUE)
+filter_status <- filter_select("status", "Pipeline status", sd, ~Status, multiple = TRUE)
+
+map <- leaflet(sd) |>                       # no fixed height -> fills the card
+  addProviderTiles(providers$CartoDB.Positron,   group = "Light") |>
+  addProviderTiles(providers$CartoDB.DarkMatter, group = "Dark") |>
+  addProviderTiles(providers$Esri.WorldImagery,  group = "Satellite") |>
+  setView(134, -26, 4) |>
+  addCircleMarkers(lng = ~Longitude, lat = ~Latitude,
+    radius = ~ifelse(Status == "Mineral deposit", 4, 6),
+    color = "white", weight = 0.6,
+    fillColor = ~pal(Status), fillOpacity = 0.85,
+    popup = ~popup, label = ~Name) |>
+  addLayersControl(baseGroups = c("Light", "Dark", "Satellite"),
+    options = layersControlOptions(collapsed = FALSE)) |>
+  addLegend("bottomright", pal = pal, values = status_levels,
+    title = "Pipeline status", opacity = 0.9)
+```
+
+## {.sidebar width=280}
+
+```{r}
+#| echo: false
+filter_family
+filter_status
+```
+
+## Column
+
+```{r}
+#| title: "Critical minerals map"
+#| echo: false
+#| padding: 0
+map
+```
+
+# Intellectual property {orientation="columns"}
+
+## Column {.tabset width="50%"}
+
+### Patents
+
+![](Patents/us_applicants_count.png){title="Patents with a US applicant"}
+
+### US share of patents
+
+![](Patents/us_applicants_share.png){title="US share of patents"}
+
+### Patents by sector
+
+![](Patents/us_by_sector_trend.png){title="Patents by technology sector"}
+
+### Trade marks
+
+![](Patents/us_applicants_tm_count.png){title="Trade marks with a US applicant"}
+
+### US share of trade marks
+
+![](Patents/us_applicants_tm_share.png){title="US share of trade marks"}
+
+### Trade marks by sector
+
+![](Patents/tm_us_by_sector_trend.png){title="Trade marks by sector"}
+
+### Trade marks: US share by class
+
+![](Patents/tm_us_share_by_class.png){title="US share of trade marks by class"}
+
+## Column {.tabset width="50%"}
+
+### US share by field
+
+![](Patents/us_share_by_field.png){title="US share by field"}
+
+### Joint filings over time
+
+![](Patents/us_au_coapplied_trend.png){title="Joint filings over time"}
+
+### Joint filings by field
+
+![](Patents/us_au_coapplied_fields.png){title="Joint filings by field"}
+
+### Joint filings by state
+
+![](Patents/us_au_coapplied_states.png){title="Joint filings by state"}
+
+### Joint trade marks over time
+
+![](Patents/tm_us_au_coapplied_trend.png){title="Joint trade mark filings over time"}
+
+### Joint trade marks by class
+
+![](Patents/tm_us_au_coapplied_classes.png){title="Joint trade mark filings by class"}
+
+### Joint trade marks by state
+
+![](Patents/tm_us_au_coapplied_states.png){title="Joint trade mark filings by state"}
+
+
+# Energy {orientation="columns"}
+
+## Column {.tabset width="50%"}
+
+### Generation by state
+
+![](Energy/02_state_fuel_mix.png){title="Generation mix by state, 2025"}
+
+### Fuel mix over time
+
+![](Energy/01_fuel_mix_timeseries.png){title="Generation by fuel, 1989-90 to 2024-25"}
+
+### Primary energy vs electricity
+
+![](Energy/03_primary_vs_electricity.png){title="Primary energy vs electricity"}
+
+## Column {.tabset width="50%"}
+
+### Renewables vs target
+
+![](Energy/04_renewables_vs_target.png){title="Renewable share against the 82% by 2030 target"}
+
+### Renewables by technology
+
+![](Energy/05_renewables_composition.png){title="Renewable generation by technology"}
+
+
+# Technology {orientation="columns"}
+
+## Column {.tabset width="50%"}
+
+### Share of world research
+
+![](Tech/A_australian_share_by_technology.png){title="Australian share of world publications"}
+
+### Quality vs volume
+
+![](Tech/B_quality_vs_volume.png){title="Share of all papers vs top decile by citations"}
+
+### Institutions
+
+![](Tech/C_australian_institutions.png){title="Leading Australian institutions by field"}
+
+## Column {.tabset width="50%"}
+
+### Collaboration: US vs China
+
+![](Tech/D_collaboration_partners.png){title="Research collaboration: US vs China"}
+
+### AI models
+
+![](Tech/E_ai_models_by_country.png){title="Notable AI models by country of developer"}
+
+### R&D intensity
+
+![](Tech/F_rd_intensity.png){title="Gross domestic expenditure on R&D, % of GDP"}
+
+# Migration {orientation="columns"}
+
+## Column {width="50%"}
+
+![](Migration/nom_usa_national.png){title="Net overseas migration from the United States"}
+
+## Column {width="50%"}
+
+![](Migration/nom_usa_states.png){title="Net overseas migration from the United States, by state"}
