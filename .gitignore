@@ -3,9 +3,10 @@
 # '2. Australia Chair Tool.qmd' loads are added back below.
 
 # Rendered dashboards, R session files, old material
-# (except docs/index.html, the published copy GitHub Pages serves)
+# (except the published dashboard and the short-link page GitHub Pages serves)
 *.html
-!docs/index.html
+!/2. Australia Chair Tool.html
+!/index.html
 *.pptx
 .Rhistory
 .RData
