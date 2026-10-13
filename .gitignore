@@ -15,6 +15,10 @@ Archive/
 *_files/
 .quarto/
 
+# Local backup copies of scripts (e.g. '1e. Energy.R.bak2')
+*.bak
+*.bak[0-9]
+
 # Chart folders: ignore all contents...
 Overview/**
 Economy/**
@@ -26,6 +30,7 @@ Patents/**
 Tech/**
 Investment/**
 Minerals/**
+Critical minerals/**
 !Overview/
 !Economy/
 !Trade/
@@ -35,6 +40,7 @@ Minerals/**
 !Patents/
 !Tech/
 !Investment/
+!Critical minerals/
 
 # ...then add back the charts the dashboard uses
 !Overview/US-Australia distance map.png
@@ -52,6 +58,7 @@ Minerals/**
 !Trade/overview_us_share_by_service.png
 !Trade/goods_vs_services_us_share.png
 !Trade/services_imports_us.png
+!Trade/us_au_trade_balance.png
 !Trade/goods_exports_*.png
 !Trade/goods_imports_*.png
 !Trade/credits_*.png
@@ -66,6 +73,7 @@ Minerals/**
 !Data centres/08_divj_financial_year.png
 !Data centres/09_real_momentum.png
 !Energy/0*.png
+!Critical minerals/minerals_au_*.png
 !Migration/nom_usa_national.png
 !Migration/nom_usa_states.png
 !Patents/us_*.png

@@ -388,7 +388,7 @@ coord_sf(
 # ----------------------------------------------------------
 
 labs(
-  title = "Australia is almost as large as the US",
+  title = "Australia and the contiguous United States at the same scale",
 #  subtitle = "Australia shown at the same geographic scale",
 #  caption = "Source: Natural Earth"
 ) +
@@ -404,9 +404,9 @@ theme_void(
   theme(
     
     plot.title = element_text(
-      size = 24,
+      size = 22,
       face = "bold",
-      hjust = 0,
+      hjust = 0.5,   # centred over the map; left-aligned it overran the right edge
       margin = margin(
         b = 5
       )

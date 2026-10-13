@@ -35,6 +35,11 @@ library(scales)
 library(forcats)
 library(readr)
 
+# Charts here use default fonts. If an earlier script in this R session turned
+# on showtext (set for a different dpi), switch it off or text renders at the
+# wrong size and titles get cut off.
+if ("showtext" %in% loadedNamespaces()) showtext::showtext_auto(FALSE)
+
 # ------------------------------------------------------------------------------
 # 0. Configuration
 # ------------------------------------------------------------------------------
@@ -226,7 +231,7 @@ p_a <- au_share |>
   scale_x_continuous(labels = percent_format(accuracy = 0.1),
                      expand = expansion(c(0, 0.15))) +
   labs(
-    title    = "Where Australian research concentrates across critical technologies",
+    title    = "Australian share of world publications by critical technology",
     subtitle = paste0("Australian share of world publications, ", min(YEARS), "-", max(YEARS),
                       ". Dashed line is Australia's average across these fields."),
     x = NULL, y = NULL,
@@ -282,7 +287,7 @@ p_b <- quality_gap |>
                                  "Top 10% most cited" = "#2a78d6")) +
   scale_x_continuous(labels = percent_format(accuracy = 0.1)) +
   labs(
-    title    = "Australian research quality punches above its volume in some fields, below in others",
+    title    = "Australian share of world publications: all papers and top 10% cited",
     subtitle = "Share of world output, all papers vs top decile by citations",
     x = NULL, y = NULL, colour = NULL,
     caption = "Source: OpenAlex."
@@ -332,7 +337,7 @@ p_c <- au_institutions |>
   scale_y_discrete(labels = function(x) str_remove(x, "\u001f.*$")) +
   scale_x_continuous(labels = comma, expand = expansion(c(0, 0.1))) +
   labs(
-    title    = "Australian institutional capability is highly concentrated",
+    title    = "Leading Australian institutions by publications in each field",
     subtitle = paste0("Publications ", min(YEARS), "-", max(YEARS), ", top six institutions per field"),
     x = NULL, y = NULL, caption = "Source: OpenAlex."
   ) +
@@ -393,7 +398,7 @@ p_d <- collab |>
   scale_x_continuous(labels = percent_format(accuracy = 1),
                      expand = expansion(c(0, 0.05))) +
   labs(
-    title    = "Who Australian researchers actually co-author with",
+    title    = "Australian publications with US and Chinese co-authors",
     subtitle = paste0("Share of Australian publications ", min(YEARS), "-", max(YEARS),
                       " with at least one co-author institution in each country"),
     x = NULL, y = NULL, fill = NULL,
@@ -465,7 +470,7 @@ p_e <- model_countries |>
   scale_fill_manual(values = c(`TRUE` = "#eb6834", `FALSE` = "#b4b2a9"), guide = "none") +
   scale_x_continuous(labels = comma, expand = expansion(c(0, 0.1))) +
   labs(
-    title    = "Australia has a research base in AI and almost no model development",
+    title    = "Notable AI models by country",
     subtitle = "Notable AI models by country of developing organisation, 2015 onward",
     x = NULL, y = NULL,
     caption = "Source: Epoch AI, 'Data on AI Models' (CC-BY)."
@@ -542,7 +547,7 @@ if (is.null(rd) || nrow(rd) == 0) {
                            guide = "none") +
     scale_x_continuous(expand = expansion(c(0.02, 0.06))) +
     labs(
-      title    = "Australian R&D intensity has drifted while comparators climbed",
+      title    = "R&D intensity, Australia and comparators",
       subtitle = "Gross domestic expenditure on R&D, per cent of GDP",
       x = NULL, y = NULL,
       caption = "Source: World Bank, World Development Indicators (GB.XPD.RSDV.GD.ZS)."

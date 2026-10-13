@@ -32,6 +32,11 @@ library(scales)
 library(forcats)
 library(readr)
 
+# Charts here use default fonts. If an earlier script in this R session turned
+# on showtext (set for a different dpi), switch it off or text renders at the
+# wrong size and titles get cut off.
+if ("showtext" %in% loadedNamespaces()) showtext::showtext_auto(FALSE)
+
 # Table O is downloaded the first time and reused after that. DCCEEW publishes
 # a new edition each June at a new address: when it does, paste the new .xlsx
 # link (from the Table O page linked above) into TABLE_O_URL, and update the
@@ -351,7 +356,7 @@ p3 <- ggplot(comparison, aes(share, basis, fill = fuel)) +
   scale_x_continuous(labels = percent_format(accuracy = 1), expand = c(0, 0)) +
   labs(
     title    = "Fuel shares of primary energy and of electricity generation",
-    subtitle = "Oil is 41% of primary energy and under 2% of generation. The difference is transport fuel, almost all imported.",
+    subtitle = "Share of Australian primary energy supply (2023-24) and of electricity generation (2025), by fuel",
     x = NULL, y = NULL,
     caption = "Source: DCCEEW, Australian Energy Statistics, Tables C (2023-24) and O (2025)."
   ) +
@@ -459,3 +464,391 @@ write_csv(gen_cy,     "australia_generation_cy_tidy.csv")
 write_csv(state_2025, "australia_generation_state_2025.csv")
 
 message("Done - five charts, five chart CSVs and three tidy CSVs written to ", getwd())
+
+# ------------------------------------------------------------------------------
+# 9. CHART 6 - cost of new solar and wind, Australia vs United States
+#
+# So what: levelised cost of electricity (LCOE) is the lifetime cost of a new
+# plant per MWh, so it compares the two countries on the same basis whatever
+# their market design. IRENA's figures exclude subsidies and tax credits.
+#
+# Data: IRENA (2026), Renewable Power Generation Costs in 2025, data file.
+#   Fig 2.11 - onshore wind weighted-average LCOE by country, 2010-2025
+#   Fig. 3.7 - utility-scale solar PV weighted-average LCOE by country, 2010-2025
+# Values are 2025 US$/MWh (the onshore wind sheet's axis label says USD/kWh,
+# but its numbers are per MWh, matching the report's text).
+# IRENA publishes a new edition each July at a new address: when it does,
+# paste the new data-file link into IRENA_URL and check the two sheet names.
+# The file sits behind a download form on the report page; the direct link
+# below still downloads it.
+# ------------------------------------------------------------------------------
+
+IRENA_URL  <- paste0("https://www.irena.org/-/media/Files/IRENA/Agency/Publication/",
+                     "2026/Jul/IRENA_TEC_RPGC_in_2025_data_file_2026.xlsx")
+irena_path <- basename(IRENA_URL)
+BROWSER_UA <- paste("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+if (!file.exists(irena_path)) {
+  message("Downloading ", irena_path)
+  httr2::request(IRENA_URL) |>
+    httr2::req_user_agent(BROWSER_UA) |>
+    httr2::req_timeout(300) |>
+    httr2::req_retry(max_tries = 3) |>
+    httr2::req_perform(path = irena_path)
+}
+stopifnot(identical(readBin(irena_path, "raw", 2), charToRaw("PK")))   # a real .xlsx, not a block page
+
+# Each sheet has a header row of years 2010-2025 with country names in the
+# column to the left of the first year.
+read_irena_lcoe <- function(sheet, technology) {
+  raw <- read_excel(irena_path, sheet = sheet, col_names = FALSE,
+                    col_types = "text", .name_repair = "minimal")
+  raw <- as.data.frame(raw)
+  hdr <- which(apply(raw, 1, function(r) sum(grepl("^20[0-9]{2}$", r)) >= 10))[1]
+  yr_cols <- which(grepl("^20[0-9]{2}$", unlist(raw[hdr, ])))
+  yr_cols <- yr_cols[c(TRUE, diff(yr_cols) == 1)]                 # first run of years only
+  ctry_col <- min(yr_cols) - 1
+  out <- raw[(hdr + 1):nrow(raw), c(ctry_col, yr_cols)]
+  names(out) <- c("country", unlist(raw[hdr, yr_cols]))
+  out |>
+    filter(country %in% c("Australia", "United States")) |>
+    pivot_longer(-country, names_to = "year", values_to = "lcoe") |>
+    mutate(year = as.integer(year), lcoe = as.numeric(lcoe), technology = technology) |>
+    filter(!is.na(lcoe))
+}
+
+lcoe <- bind_rows(
+  read_irena_lcoe("Fig. 3.7", "Utility-scale solar PV"),
+  read_irena_lcoe("Fig 2.11", "Onshore wind")
+) |>
+  mutate(technology = factor(technology, levels = c("Utility-scale solar PV", "Onshore wind")))
+
+stopifnot(nrow(lcoe) > 40, n_distinct(lcoe$country) == 2)
+
+lcoe_latest <- lcoe |> group_by(technology, country) |> slice_max(year, n = 1) |> ungroup()
+lcoe_yr     <- max(lcoe_latest$year)
+
+au_us_cols <- c("Australia" = "#eda100", "United States" = "#00205B")
+
+# From 2015: the 2010-12 solar costs (up to $490/MWh) would flatten the recent comparison.
+lcoe_plot <- lcoe |> filter(year >= 2015)
+
+p6 <- ggplot(lcoe_plot, aes(year, lcoe, colour = country)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1.4) +
+  ggrepel::geom_text_repel(data = lcoe_latest, aes(label = paste0("$", round(lcoe))),
+                           nudge_x = 0.6, direction = "y", hjust = 0, size = 3.2,
+                           segment.colour = NA, min.segment.length = Inf, show.legend = FALSE) +
+  facet_wrap(~ technology) +
+  scale_colour_manual(values = au_us_cols) +
+  scale_y_continuous(labels = label_dollar(), limits = c(0, NA),
+                     expand = expansion(c(0, 0.05))) +
+  scale_x_continuous(breaks = seq(2015, 2025, 2), expand = expansion(mult = c(0.02, 0.14))) +
+  labs(
+    title    = "Levelised cost of new solar and wind, Australia and the United States",
+    subtitle = sprintf(paste0("Weighted-average levelised cost of electricity for new projects, ",
+                              "%d US$ per MWh, 2015-%d"), lcoe_yr, lcoe_yr),
+    x = NULL, y = NULL,
+    caption  = paste0("Source: IRENA (2026), Renewable Power Generation Costs in 2025, data file ",
+                      "(Fig. 2.11 and Fig. 3.7).\nLCOE excludes subsidies and tax credits, ",
+                      "so US figures are before federal tax credits.")
+  ) +
+  theme_csis() +
+  theme(strip.text = element_text(face = "bold", size = 10))
+
+ggsave("06_lcoe_au_us.png", p6, width = 9, height = 5, dpi = 150, bg = "white")
+
+export_chart_csv(p6, "06_lcoe_au_us.csv",
+                 y_format = "number", chart_type = "Faceted line with point markers",
+                 extra = c("technology", "country"),
+                 notes = paste0("Values are ", lcoe_yr, " US$ per MWh (not counts). Facets by technology. ",
+                                "Colours: Australia #eda100; United States #00205B. ",
+                                "Latest value labelled at the end of each line."))
+
+
+# ------------------------------------------------------------------------------
+# 10. CHART 7 - wholesale electricity prices, Australia vs California and Texas
+#
+# So what: spot prices are what generators earn and what large users pay
+# before network charges, so they are the closest like-for-like measure of
+# power costs between the two countries.
+#
+# Data (all free, no key needed; raw files are kept in Energy/raw/):
+#   - AEMO aggregated price and demand data: regional reference price (RRP)
+#     for each 5-minute dispatch interval
+#   - CAISO OASIS: hourly day-ahead price (LMP) at the SP15 trading hub
+#     (Southern California)
+#   - RBA table F11: monthly A$/US$ exchange rate (end of month)
+#
+#   - ERCOT: 15-minute real-time price at the Texas hub average, from its
+#     yearly historical price files (see the ERCOT notes below)
+#
+# Texas (ERCOT) is the closest US match to the NEM: an energy-only market
+# with lots of wind and solar. PJM's data needs a registered API key, so it
+# is not included. Each region's price is a simple time-weighted average
+# of all intervals, so all markets are averaged the same way (AEMO's own
+# headline figures are demand-weighted; those are in the tidy CSV as vwa_aud).
+#
+# OASIS only keeps about 39 months of hourly prices, so the chart starts at
+# PRICE_START. Downloaded months are kept in Energy/raw/ and never fetched
+# again, so the series grows with each refresh: do not delete that folder.
+# Complete quarters only.
+# ------------------------------------------------------------------------------
+
+PRICE_START <- as.Date("2023-07-01")
+last_month  <- seq(as.Date(format(Sys.Date(), "%Y-%m-01")), by = "-1 month", length.out = 2)[2]
+NEM_REGIONS <- c(NSW = "NSW1", QLD = "QLD1", VIC = "VIC1", SA = "SA1")
+dir.create(file.path("raw", "aemo"),  recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("raw", "caiso"), recursive = TRUE, showWarnings = FALSE)
+
+# Downloads url to dest unless a good copy is already there (and, if
+# max_age_days is set, younger than that).
+fetch_cached <- function(url, dest, check = function(p) file.size(p) > 1000,
+                         max_age_days = Inf) {
+  fresh <- file.exists(dest) &&
+    difftime(Sys.time(), file.mtime(dest), units = "days") < max_age_days
+  if (fresh && check(dest)) return(dest)
+  httr2::request(url) |>
+    httr2::req_user_agent(BROWSER_UA) |>
+    httr2::req_timeout(180) |>
+    httr2::req_retry(max_tries = 4, backoff = function(i) 5 * i) |>
+    httr2::req_perform(path = dest)
+  if (!check(dest)) stop("Download did not return data: ", url)
+  dest
+}
+
+price_months <- seq(PRICE_START, last_month, by = "1 month")
+
+# --- AEMO: monthly summaries of each region's 5-minute dispatch prices ---
+nem_monthly <- expand_grid(month_start = price_months, region = names(NEM_REGIONS)) |>
+  purrr::pmap(function(month_start, region) {
+    file <- sprintf("PRICE_AND_DEMAND_%s_%s.csv", format(month_start, "%Y%m"), NEM_REGIONS[[region]])
+    path <- fetch_cached(paste0("https://www.aemo.com.au/aemo/data/nem/priceanddemand/", file),
+                         file.path("raw", "aemo", file))
+    d <- read_csv(path, show_col_types = FALSE, col_select = c(TOTALDEMAND, RRP))
+    tibble(month_start, region,
+           minutes = nrow(d) * 5,
+           twa_aud = mean(d$RRP),
+           vwa_aud = sum(d$RRP * d$TOTALDEMAND) / sum(d$TOTALDEMAND))
+  }) |>
+  purrr::list_rbind()
+
+# --- CAISO: hourly day-ahead SP15 prices, one request per month ---
+# Requests run from local (Pacific) midnight to midnight: OASIS rejects
+# windows over 31 days, which a UTC window crossing daylight saving can be.
+# OASIS allows one request every few seconds, so new months are fetched slowly.
+caiso_monthly <- tibble(month_start = price_months) |>
+  purrr::pmap(function(month_start) {
+    next_month <- seq(month_start, by = "1 month", length.out = 2)[2]
+    utc_stamp  <- function(d) format(as.POSIXct(format(d), tz = "America/Los_Angeles"),
+                                     "%Y%m%dT%H:%M-0000", tz = "UTC")
+    dest <- file.path("raw", "caiso", sprintf("SP15_DAM_%s.zip", format(month_start, "%Y%m")))
+    if (!file.exists(dest)) Sys.sleep(5)
+    url <- paste0("https://oasis.caiso.com/oasisapi/SingleZip?queryname=PRC_LMP",
+                  "&market_run_id=DAM&version=12&node=TH_SP15_GEN-APND",
+                  "&startdatetime=", utc_stamp(month_start),
+                  "&enddatetime=",   utc_stamp(next_month),
+                  "&resultformat=6")
+    fetch_cached(url, dest, check = function(p) {
+      file.size(p) > 1000 && any(grepl("\\.csv$", utils::unzip(p, list = TRUE)$Name))
+    })
+    csv <- utils::unzip(dest, list = TRUE)$Name[1]
+    d <- read_csv(unz(dest, csv), show_col_types = FALSE) |>
+      filter(XML_DATA_ITEM == "LMP_PRC",
+             format(as.Date(OPR_DT), "%Y-%m") == format(month_start, "%Y-%m"))
+    tibble(month_start, minutes = nrow(d) * 60, usd = mean(d$MW))   # MW column holds the price
+  }) |>
+  purrr::list_rbind()
+
+# --- ERCOT (Texas): 15-minute real-time prices at the hub average (HB_HUBAVG) ---
+# Source: ERCOT "Historical RTM Load Zone and Hub Prices" (NP6-785-ER), one
+# zip per year, free with no login:
+#   https://www.ercot.com/mp/data-products/data-product-details?id=NP6-785-ER
+# The script reads ERCOT's file list and downloads each year it needs into
+# Energy/raw/ercot/. Past years are kept and not fetched again; the current
+# year's file, which ERCOT updates daily, is re-fetched when over a week old.
+# ercot.com refuses requests that don't look like they come from its own page,
+# hence the Referer header. If the download ever fails, save the yearly zips
+# from the page above into Energy/raw/ercot/ by hand and the script uses those.
+# If there is no ERCOT data at all, Texas is left off the chart.
+
+ERCOT_HUB   <- "HB_HUBAVG"
+ERCOT_DIR   <- file.path("raw", "ercot")
+ERCOT_PAGE  <- "https://www.ercot.com/mp/data-products/data-product-details?id=NP6-785-ER"
+dir.create(ERCOT_DIR, recursive = TRUE, showWarnings = FALSE)
+
+ercot_request <- function(url) {
+  httr2::request(url) |>
+    httr2::req_user_agent(BROWSER_UA) |>
+    httr2::req_headers(Referer = ERCOT_PAGE) |>
+    httr2::req_timeout(300) |>
+    httr2::req_retry(max_tries = 3, backoff = function(i) 5 * i)
+}
+
+# Download the yearly zips covering PRICE_START to last month
+fetch_ercot_files <- function() {
+  docs <- ercot_request("https://www.ercot.com/misapp/servlets/IceDocListJsonWS?reportTypeId=13061") |>
+    httr2::req_headers(Accept = "application/json") |>
+    httr2::req_perform() |>
+    httr2::resp_body_string() |>                 # ERCOT sends no content type, so parse the text
+    jsonlite::fromJSON()
+  docs <- docs$ListDocsByRptTypeRes$DocumentList$Document
+  years <- as.integer(format(PRICE_START, "%Y")):as.integer(format(last_month, "%Y"))
+  for (y in years) {
+    doc <- docs[docs$FriendlyName == paste0("RTMLZHBSPP_", y), ]
+    if (nrow(doc) == 0) { message("ERCOT: no file listed for ", y); next }
+    dest <- file.path(ERCOT_DIR, paste0("RTMLZHBSPP_", y, ".zip"))
+    current_year <- y == as.integer(format(Sys.Date(), "%Y"))
+    stale <- !file.exists(dest) ||
+      (current_year && difftime(Sys.time(), file.mtime(dest), units = "days") > 7)
+    if (!stale) next
+    message("ERCOT: downloading RTMLZHBSPP_", y)
+    ercot_request(paste0("https://www.ercot.com/misdownload/servlets/mirDownload?doclookupId=",
+                         doc$DocID[1])) |>
+      httr2::req_perform(path = dest)
+    if (!identical(readBin(dest, "raw", 2), charToRaw("PK"))) {
+      unlink(dest); stop("ERCOT returned something other than a zip for ", y)
+    }
+  }
+}
+
+# One row per 15-minute interval at the hub, from every workbook in the folder
+read_ercot_files <- function() {
+  for (z in list.files(ERCOT_DIR, "\\.zip$", full.names = TRUE))
+    utils::unzip(z, exdir = ERCOT_DIR, overwrite = TRUE)
+  books <- list.files(ERCOT_DIR, "\\.xlsx$", full.names = TRUE)
+  if (length(books) == 0) return(NULL)
+  purrr::map(books, function(b) {
+    purrr::map(excel_sheets(b), function(sh) {
+      d <- read_excel(b, sheet = sh)
+      names(d) <- str_replace_all(str_to_lower(names(d)), "[^a-z]+", "_")
+      if (!all(c("delivery_date", "delivery_hour", "delivery_interval",
+                 "settlement_point_name", "settlement_point_price") %in% names(d)))
+        return(NULL)
+      if (!"repeated_hour_flag" %in% names(d)) d$repeated_hour_flag <- "N"
+      d |>
+        filter(settlement_point_name == ERCOT_HUB) |>
+        transmute(date     = as.Date(delivery_date, tryFormats = c("%m/%d/%Y", "%Y-%m-%d")),
+                  hour     = as.integer(delivery_hour),
+                  interval = as.integer(delivery_interval),
+                  repeated = as.character(repeated_hour_flag),
+                  price    = as.numeric(settlement_point_price))
+    }) |> purrr::list_rbind()
+  }) |> purrr::list_rbind() |>
+    distinct(date, hour, interval, repeated, .keep_all = TRUE)   # same year saved twice
+}
+
+tryCatch(fetch_ercot_files(),
+         error = function(e) message("ERCOT download failed (", conditionMessage(e),
+                                     "); using any files already in ", ERCOT_DIR))
+ercot_raw <- read_ercot_files()
+
+ercot_monthly <- if (!is.null(ercot_raw) && nrow(ercot_raw) > 0) {
+  ercot_raw |>
+    mutate(month_start = as.Date(format(date, "%Y-%m-01"))) |>
+    filter(month_start %in% price_months) |>
+    group_by(month_start) |>
+    summarise(minutes = n() * 15, usd = mean(price), days = n_distinct(date), .groups = "drop") |>
+    # whole months only (the current-year file stops part-way through a month)
+    filter(days == vapply(month_start, function(m)
+      as.integer(format(seq(m, by = "1 month", length.out = 2)[2] - 1, "%d")), integer(1))) |>
+    select(-days)
+} else NULL
+
+has_ercot <- !is.null(ercot_monthly) && nrow(ercot_monthly) > 0
+if (has_ercot) {
+  message("ERCOT: ", nrow(ercot_monthly), " months of ", ERCOT_HUB, " prices")
+} else {
+  message("ERCOT: no data found, so Texas is left off the wholesale price chart.")
+}
+
+# --- RBA: monthly exchange rate (re-downloaded when over a week old) ---
+fx_path <- fetch_cached("https://www.rba.gov.au/statistics/tables/csv/f11-data.csv",
+                        file.path("raw", "rba_f11_monthly.csv"), max_age_days = 7)
+fx_raw <- read_csv(fx_path, skip = 1, col_names = FALSE, show_col_types = FALSE,
+                   col_types = cols(.default = col_character()))
+fx <- fx_raw |>
+  filter(grepl("^\\d{2}-[A-Za-z]{3}-\\d{4}$", X1)) |>          # data rows only, not the header block
+  transmute(date = as.Date(X1, format = "%d-%b-%Y"), aud_usd = as.numeric(X2)) |>
+  filter(!is.na(date), !is.na(aud_usd)) |>
+  transmute(month_start = as.Date(format(date, "%Y-%m-01")), aud_usd)
+
+missing_fx <- setdiff(price_months, fx$month_start)
+if (length(missing_fx) > 0)
+  warning("No RBA exchange rate yet for ", paste(format(as.Date(missing_fx, origin = "1970-01-01"),
+                                                        "%b %Y"), collapse = ", "),
+          "; those months are left out.")
+
+# --- Quarterly averages in US$/MWh ---
+price_qtr <- bind_rows(
+  nem_monthly |>
+    inner_join(fx, by = "month_start") |>
+    mutate(usd = twa_aud * aud_usd),
+  caiso_monthly |> mutate(region = "California (SP15)"),
+  if (has_ercot) ercot_monthly |> mutate(region = "Texas (ERCOT)")
+) |>
+  mutate(quarter = as.Date(paste0(format(month_start, "%Y-"),
+                                  sprintf("%02d", (as.integer(format(month_start, "%m")) - 1) %/% 3 * 3 + 1),
+                                  "-01"))) |>
+  group_by(region, quarter) |>
+  summarise(n_months  = n(),
+            price_usd = weighted.mean(usd, minutes),
+            twa_aud   = if (all(is.na(twa_aud))) NA_real_ else weighted.mean(twa_aud, minutes),
+            vwa_aud   = if (all(is.na(vwa_aud))) NA_real_ else weighted.mean(vwa_aud, minutes),
+            .groups = "drop") |>
+  filter(n_months == 3) |>
+  mutate(region = factor(region, levels = intersect(c("Texas (ERCOT)", "California (SP15)", names(NEM_REGIONS)),
+                                                   unique(region))))
+
+stopifnot(n_distinct(price_qtr$region) == 5 + has_ercot)
+us_markets <- c("Texas (ERCOT)", "California (SP15)")
+
+qtr_label    <- function(d) paste0(format(d, "%Y"), " Q", (as.integer(format(d, "%m")) - 1) %/% 3 + 1)
+price_latest <- price_qtr |> filter(quarter == max(quarter))
+price_q      <- max(price_latest$quarter)
+
+price_cols <- c("Texas (ERCOT)" = "#D2232A", "California (SP15)" = "#00205B",
+                NSW = "#eda100", QLD = "#993c1d", VIC = "#2a78d6", SA = "#1baf7a")
+
+p7 <- ggplot(price_qtr, aes(quarter, price_usd, colour = region)) +
+  geom_line(aes(linewidth = region %in% us_markets)) +
+  geom_point(size = 1.4) +
+  ggrepel::geom_text_repel(data = price_latest, aes(label = paste0("$", round(price_usd))),
+                           nudge_x = 25, direction = "y", hjust = 0, size = 3.1,
+                           segment.colour = NA, min.segment.length = Inf, show.legend = FALSE) +
+  scale_linewidth_manual(values = c(`TRUE` = 1.4, `FALSE` = 0.7), guide = "none") +
+  scale_colour_manual(values = price_cols) +
+  scale_y_continuous(labels = label_dollar(), limits = c(0, NA),
+                     expand = expansion(c(0, 0.05))) +
+  scale_x_date(breaks = seq(min(price_qtr$quarter), price_q, by = "6 months"),
+               labels = qtr_label, expand = expansion(mult = c(0.02, 0.08))) +
+  labs(
+    title    = if (has_ercot) "Wholesale electricity prices, Australian NEM regions, California and Texas (ERCOT)"
+               else "Wholesale electricity prices, Australian NEM regions and California",
+    subtitle = sprintf(paste0("Average wholesale spot price, US$ per MWh, quarterly, %s to %s. ",
+                              "Australian states are NEM regions."),
+                       qtr_label(min(price_qtr$quarter)), qtr_label(price_q)),
+    x = NULL, y = NULL,
+    caption  = paste0("Sources: AEMO aggregated price and demand data (5-minute regional prices); ",
+                      "CAISO OASIS (hourly day-ahead price, SP15 hub);\n",
+                      if (has_ercot) "ERCOT (15-minute real-time price, hub average HB_HUBAVG); " else "",
+                      "RBA table F11 (monthly A$/US$ exchange rate, used to convert each month).\n",
+                      "Simple time-weighted averages of all intervals.",
+                      if (has_ercot) "" else " Texas (ERCOT) not shown: no ERCOT data available on this run.")
+  ) +
+  theme_csis()
+
+ggsave("07_wholesale_prices_au_us.png", p7, width = 9, height = 5.2, dpi = 150, bg = "white")
+
+export_chart_csv(p7, "07_wholesale_prices_au_us.csv",
+                 y_format = "number", chart_type = "Line with point markers",
+                 extra = "region",
+                 notes = paste0("Values are US$ per MWh (not counts). quarter = first day of the quarter. ",
+                                "Colours: Texas (ERCOT) #D2232A and California (SP15) #00205B (thicker lines); NSW #eda100; ",
+                                "QLD #993c1d; VIC #2a78d6; SA #1baf7a. Latest value labelled."))
+
+write_csv(lcoe |> arrange(technology, country, year), "lcoe_au_us_tidy.csv")
+write_csv(price_qtr |> arrange(region, quarter), "wholesale_prices_au_us_tidy.csv")
+
+message("Done - charts 6 and 7 written to ", getwd())

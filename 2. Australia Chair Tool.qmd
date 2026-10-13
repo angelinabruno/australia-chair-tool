@@ -98,6 +98,10 @@ cat(paste0(
 
 ## Column {.tabset width="50%"}
 
+### US trade balance
+
+![](Trade/us_au_trade_balance.png){title="US trade with Australia: exports each way and the US surplus"}
+
 ### US share: goods vs services
 
 ![](Trade/goods_vs_services_us_share.png){title="US share of Australia's trade, goods vs services"}
@@ -460,7 +464,7 @@ filter_family
 filter_status
 ```
 
-## Column
+## Column {.tabset}
 
 ```{r}
 #| title: "Critical minerals map"
@@ -468,6 +472,14 @@ filter_status
 #| padding: 0
 map
 ```
+
+### Australia's global share
+
+![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
+
+### Reserves vs production
+
+![](<Critical minerals/minerals_au_reserves_vs_production.png>){title="Australia's share of world reserves vs production"}
 
 # Intellectual property {orientation="columns"}
 
@@ -557,6 +569,14 @@ map
 ### Renewables by technology
 
 ![](Energy/05_renewables_composition.png){title="Renewable generation by technology"}
+
+### Cost of new solar and wind
+
+![](Energy/06_lcoe_au_us.png){title="Cost of new solar and wind, Australia vs United States"}
+
+### Wholesale prices vs US
+
+![](Energy/07_wholesale_prices_au_us.png){title="Wholesale electricity prices, Australia and US markets"}
 
 
 # Technology {orientation="columns"}

@@ -1392,7 +1392,7 @@ p_services_imp <- ggplot(services_imp, aes(value_bn, country, fill = is_us)) +
     expand = expansion(mult = c(0, 0.22))
   ) +
   labs(
-    title = "The United States dominates Australia's services imports",
+    title = "Australia's services imports by partner",
     subtitle = "Services imports by source country, 2025",
     x = NULL, y = NULL,
     caption = paste(
@@ -2101,5 +2101,95 @@ ov_wide <- dcast(ov[, .(year, key = paste(flow, industry, sep = " | "),
 fwrite(ov_wide, file.path(out_dir, "goods_overview_us_share_by_industry.csv"), bom = TRUE)
 
 message("Done. Outputs written to: ", out_dir)
+
+# ------------------------------------------------------------------------------
+# US trade with Australia: exports each way and the US surplus
+# ------------------------------------------------------------------------------
+# Reuses data built above, so nothing new is downloaded:
+#   goods    - dfat_trade_by_country.csv (A$ thousand, calendar years)
+#   services - svc_cr / svc_db from section 4b (A$ million, calendar years)
+#
+# Seen from the US side:
+#   US exports to Australia      = Australia's imports from the US (above zero)
+#   Australian exports to the US = Australia's exports to the US (below zero)
+#   US trade surplus             = the difference
+
+INCLUDE_SERVICES <- TRUE   # FALSE for goods only
+
+is_us <- function(x) stri_detect_regex(x, "^United States( of America)?$")
+
+goods_us <- read_csv("dfat_trade_by_country.csv", show_col_types = FALSE) |>
+  filter(is_us(country)) |>
+  mutate(flow = if_else(trade_type == "Total Exports", "au_exports", "us_exports"),
+         value_bn = value_k / 1e6) |>
+  group_by(year, flow) |>
+  summarise(value_bn = sum(value_bn), .groups = "drop")
+
+us_balance <- goods_us
+
+if (INCLUDE_SERVICES) {
+  services_us <- bind_rows(
+    as.data.frame(svc_cr) |> filter(is_us(country)) |> mutate(flow = "au_exports"),
+    as.data.frame(svc_db) |> filter(is_us(country)) |> mutate(flow = "us_exports")
+  ) |>
+    group_by(year, flow) |>
+    summarise(value_bn = sum(value_m, na.rm = TRUE) / 1000, .groups = "drop")
+
+  # Keep only years both sources cover, so goods and services add up.
+  common_years <- intersect(goods_us$year, services_us$year)
+  us_balance <- bind_rows(goods_us, services_us) |>
+    filter(year %in% common_years) |>
+    group_by(year, flow) |>
+    summarise(value_bn = sum(value_bn), .groups = "drop")
+}
+
+us_balance <- us_balance |>
+  tidyr::pivot_wider(names_from = flow, values_from = value_bn) |>
+  mutate(surplus = us_exports - au_exports) |>
+  arrange(year)
+
+balance_long <- bind_rows(
+  us_balance |> transmute(year, value =  us_exports, series = "US exports to Australia"),
+  us_balance |> transmute(year, value =  surplus,    series = "US trade surplus"),
+  us_balance |> transmute(year, value = -au_exports, series = "Australian exports to the US")
+) |>
+  mutate(series = factor(series, levels = c("US exports to Australia",
+                                            "US trade surplus",
+                                            "Australian exports to the US")))
+
+balance_latest <- balance_long |> filter(year == max(year))
+
+bn_label <- function(x) ifelse(x < 0, paste0("-$", abs(x), "b"), paste0("$", x, "b"))
+
+p_us_balance <- ggplot(balance_long, aes(year, value, colour = series)) +
+  geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.5) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1.6) +
+  geom_text(data = balance_latest,
+            aes(label = bn_label(round(value, 1))),
+            hjust = -0.25, size = 3.6, family = "source_sans", show.legend = FALSE) +
+  scale_colour_manual(values = c(
+    "US exports to Australia"      = csis_colours[["navy"]],
+    "US trade surplus"             = csis_colours[["gold"]],
+    "Australian exports to the US" = csis_colours[["teal"]]
+  )) +
+  scale_y_continuous(labels = bn_label, breaks = scales::pretty_breaks(8)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(8),
+                     expand = expansion(mult = c(0.01, 0.08))) +
+  labs(
+    title    = "US exports to Australia, Australian exports to the US and the US surplus",
+    subtitle = paste0(if (INCLUDE_SERVICES) "Goods and services" else "Goods",
+                      " trade between the US and Australia, calendar years, A$ billion"),
+    x = NULL, y = NULL,
+    caption  = paste0(
+      "Sources: DFAT country and commodity pivot table (ABS cat. 5368.0)",
+      if (INCLUDE_SERVICES) "; ABS, International Trade: Supplementary Information, Calendar Year" else "",
+      ".\nAustralian exports to the US shown below zero. US surplus = US exports less Australian exports."
+    )
+  ) +
+  theme_csis()
+
+save_csis(p_us_balance, "us_au_trade_balance.png")
+write_csv(us_balance, "us_au_trade_balance_tidy.csv")
 
 rm(list = ls())

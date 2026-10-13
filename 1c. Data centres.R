@@ -198,7 +198,7 @@ p1 <- cp %>%
   scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
   scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
   labs(
-    title    = "Data centre build-out is evident from increased building and equipment expenditure",
+    title    = "Information Media & Telecommunications capital expenditure by asset type",
     subtitle = "Information Media & Telecommunications capital expenditure, rolling four-quarter sum",
     y = "A$ million", x = NULL,
     caption  = paste(SRC, "Current price, original.")
@@ -221,7 +221,7 @@ p2 <- cp %>%
                      expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
   scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
   labs(
-    title    = "Information Media & Telecommunications' share of national capex has broken out",
+    title    = "Information Media & Telecommunications share of all-industry capex",
     subtitle = "Share of all-industry capital expenditure, rolling four-quarter sum",
     y = "Share of total", x = NULL,
     caption  = paste(SRC, "Current price, original.")
@@ -252,7 +252,7 @@ p3 <- cp %>%
   filter(measure == "Actual", asset == EPM,
          !industry %in% c("Total", "Non-Mining"), !is.na(roll4)) %>%
   mutate(plot_val = roll4) %>%
-  spaghetti("Information Media & Telecommunications is now rivalling mining on equipment capex",
+  spaghetti("Equipment, plant and machinery capex by industry",
             paste("Actual equipment, plant and machinery by industry,",
                   "rolling four-quarter sum; grey lines are other industries"))
 save_csis(p3, "03_epm_actual_by_industry.png")
@@ -261,7 +261,7 @@ p4 <- cp %>%
   filter(measure == "Expected ST", asset == EPM,
          !industry %in% c("Total", "Non-Mining"), !is.na(value)) %>%
   mutate(plot_val = value) %>%
-  spaghetti("Information Media & Telecommunications now leads expected equipment spend",
+  spaghetti("Expected equipment, plant and machinery capex by industry",
             paste("Short term expected equipment capex (current financial year)",
                   "by industry; grey lines are other industries"))
 save_csis(p4, "04_epm_expected_by_industry.png")
@@ -296,13 +296,13 @@ plot_actual_vs_expected <- function(ind, ast, ttl, sub, from = as.Date("1987-01-
 
 p5 <- plot_actual_vs_expected(
   "Total", BS,
-  "Expectations lead the cycle, and understate it",
+  "Buildings and structures capex: actual and expected",
   "Buildings and structures, all industries")
 save_csis(p5, "05_actual_vs_expected_bs_total.png")
 
 p6 <- plot_actual_vs_expected(
   IMT, EPM,
-  "Expected equipment spend in Information Media & Telecommunications has surged",
+  "Information Media & Telecommunications equipment capex: actual and expected",
   "Equipment, plant and machinery, Information Media & Telecommunications",
   from = as.Date("2005-01-01"))
 save_csis(p6, "06_actual_vs_expected_epm_divj.png")
@@ -348,7 +348,7 @@ p7 <- ggplot(rz, aes(x = fy)) +
   scale_colour_manual(values = c("First estimate, a year ahead" = csis_colours[["red"]])) +
   scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.12))) +
   labs(
-    title    = "Firms have consistently under-forecast Information Media & Telecommunications equipment spend",
+    title    = "IMT equipment capex: actual outturn vs first estimate",
     subtitle = "Labels show actual as a multiple of the first estimate made a year ahead",
     y = "A$ million", x = NULL,
     caption  = paste(SRC, "Current price, original.")

@@ -26,7 +26,8 @@ Sys.setenv(DASHBOARD_DIR = normalizePath(DASHBOARD_DIR, winslash = "/"))
   "1g. Migration.R",
   "1h. Patents.R",             # the slowest: downloads a ~1.3 GB zip from IP RAPID
                                # (reused for 30 days). Put # in front to skip it.
-  "1i. Investment.R"
+  "1i. Investment.R",
+  "1j. Critical minerals.R"     # USGS world shares; reused once downloaded
 )
 
 
@@ -39,6 +40,10 @@ for (.s in .scripts) {
   setwd(Sys.getenv("DASHBOARD_DIR"))
   message("\n==== ", .s, " ====")
   .t0  <- Sys.time()
+  # Scripts that use showtext set its dpi to match their own ggsave() dpi.
+  # Switch it off before each script so that setting can't carry over and
+  # blow up (or shrink) the text in the next script's charts.
+  if ("showtext" %in% loadedNamespaces()) showtext::showtext_auto(FALSE)
   .res <- tryCatch({
     source(file.path(Sys.getenv("DASHBOARD_DIR"), .s))
     "OK"

@@ -265,7 +265,7 @@ p_level_ind <- ggplot(level_ind, aes(value, industry)) +
   scale_x_continuous(labels = label_number(scale = 1e-3, prefix = "$", suffix = "bn"),
                      expand = expansion(mult = c(0, 0.20))) +
   scale_y_discrete(limits = rev) +   # largest bar at the top
-  labs(title = "Mining is Australia's largest industry by gross value added",
+  labs(title = "Australian gross value added by industry",
        subtitle = paste0("Gross value added by ANZSIC division, current prices, ",
                          format(latest_q, "%B %Y"), " quarter. Share of total in brackets."),
        x = NULL, y = NULL,
@@ -372,7 +372,7 @@ p_pcap <- size_bar(size |> mutate(v = pcap_ppp / 1e3), "$%.0fk",
 
 p_size <- (p_agg | p_pcap) +
   plot_annotation(
-    title   = "Australia is a high-income small country",
+    title   = "Aggregate GDP and GDP per capita, Australia and the United States",
     caption = paste0("Source: World Bank World Development Indicators, ", size_yr, "."),
     theme   = theme_csis()
   )
@@ -425,7 +425,7 @@ p_states <- ggplot(states_plot, aes(value, name, fill = is_au)) +
                                `FALSE` = csis_colours[["ltgrey"]]), guide = "none") +
   scale_x_continuous(labels = label_number(prefix = "$", suffix = "tn", accuracy = 0.5),
                      expand = expansion(mult = c(0, 0.18))) +
-  labs(title = paste0("Australia's economy is comparable to ", nearest),
+  labs(title = "GDP of Australia and US states",
        subtitle = paste0("GDP, current US$, ", states_yr, ". Australia shown in red."),
        x = NULL, y = NULL,
        caption = "Sources: US BEA; World Bank World Development Indicators.") +
@@ -499,8 +499,7 @@ p_oecd_rank <- ggplot(oecd_plot, aes(gdp_usd / 1e12, country_label, fill = is_au
                                `FALSE` = csis_colours[["ltgrey"]]), guide = "none") +
   scale_x_continuous(labels = label_dollar(suffix = "tn", accuracy = 1),
                      expand = expansion(mult = c(0, 0.12))) +
-  labs(title = paste0("Australia is the ", ordinal(au_rank),
-                      "-largest economy in the OECD"),
+  labs(title = "Largest OECD economies by nominal GDP",
        subtitle = paste0("Nominal GDP, current US$, ", oecd_yr,
                          ". Ranking is among all 38 OECD members."),
        x = NULL, y = NULL,
