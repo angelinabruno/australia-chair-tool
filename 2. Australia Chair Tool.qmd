@@ -2,43 +2,153 @@
 title: "Australia Chair Tool"
 format:
   dashboard:
-    theme: cosmo
+    theme: [cosmo, theme/csis-redesign.scss]
     embed-resources: true
     nav-buttons: [github]
     scrolling: false
 ---
 
-# Overview
+# Overview {scrolling="true"}
 
-## Row {height="24%"}
-
-::: {.card .landing-card}
+::: {.card .ov-card}
 ```{r}
 #| echo: false
 #| output: asis
-# The "Last updated" date is the day the dashboard was rendered.
+# Trial redesign of the Overview page. Headline numbers are read from the
+# CSVs the 1a-1j scripts write, so they update with each quarterly refresh.
+# A number whose file is missing shows as "n/a" instead of stopping the render.
+suppressPackageStartupMessages({ library(readr); library(dplyr) })
+
+safely_num <- function(expr) tryCatch(expr, error = function(e) NULL)
+fmt_aud <- function(bn) {
+  if (is.null(bn) || is.na(bn)) return("n/a")
+  if (bn >= 1000) sprintf("A$%.2f<small>tn</small>", bn / 1000) else sprintf("A$%.1f<small>bn</small>", bn)
+}
+ordinal <- function(n) paste0(n, if (n %% 100 %in% 11:13) "th" else
+  switch(as.character(n %% 10), "1" = "st", "2" = "nd", "3" = "rd", "th"))
+# "the largest" rather than "the 1st-largest"
+largest <- function(n) if (isTRUE(n == 1)) "largest" else paste0(ordinal(n), "-largest")
+
+# Investment (ABS international investment position)
+iip <- safely_num(read_csv("Investment/iip_levels_latest.csv", show_col_types = FALSE))
+inv_in  <- safely_num(iip |> filter(direction == "Foreign investment in Australia") |> arrange(desc(value_bn)))
+inv_out <- safely_num(iip |> filter(direction == "Australian investment abroad") |> arrange(desc(value_bn)))
+inv_yr  <- safely_num(max(iip$year))
+us_in      <- safely_num(inv_in$value_bn[inv_in$partner == "United States"])
+us_in_rank <- safely_num(match("United States", inv_in$partner))
+us_out      <- safely_num(inv_out$value_bn[inv_out$partner == "United States"])
+us_out_rank <- safely_num(match("United States", inv_out$partner))
+
+# Trade (goods and services, calendar year)
+bal <- safely_num(read_csv("Trade/us_au_trade_balance_tidy.csv", show_col_types = FALSE) |> slice_max(year))
+two_way <- safely_num(bal$us_exports + bal$au_exports)
+surplus <- safely_num(bal$surplus)
+
+# Critical minerals (USGS)
+min_tbl <- safely_num(read_csv("Critical minerals/minerals_au_us_tidy.csv", show_col_types = FALSE))
+li <- safely_num(min_tbl |> filter(mineral == "Lithium"))
+n_top3 <- safely_num(sum(min_tbl$au_world_rank <= 3, na.rm = TRUE))
+
+# Patents with a US applicant (IP Australia); the file starts with a metadata block
+pat_lines <- safely_num(readLines("Patents/us_applicants_count.csv", warn = FALSE))
+pat <- safely_num({
+  rows <- grep("^[0-9]{4},[0-9]+$", pat_lines, value = TRUE)
+  d <- read.csv(text = rows, header = FALSE, col.names = c("year", "n"))
+  d[which.max(d$year), ]
+})
+
+stat <- function(page, num, label, note) sprintf(
+  '<a class="ov-stat" href="#%s" data-page="%s"><div class="ov-stat-num">%s</div><div class="ov-stat-label">%s</div><div class="ov-stat-note">%s</div></a>',
+  page, page, num, label, note)
+
+stats <- c(
+  stat("foreign-investment", fmt_aud(us_in),
+       sprintf("US investment in Australia, the %s source", largest(us_in_rank)),
+       sprintf("Stock at 31 December %s", inv_yr)),
+  stat("foreign-investment", fmt_aud(us_out),
+       sprintf("Australian investment in the US, the %s destination", largest(us_out_rank)),
+       sprintf("Stock at 31 December %s", inv_yr)),
+  stat("trade-overview", fmt_aud(two_way),
+       "Two-way trade in goods and services",
+       sprintf("Calendar %s", bal$year)),
+  stat("trade-overview", fmt_aud(surplus),
+       "US trade surplus with Australia",
+       sprintf("Goods and services, %s", bal$year)),
+  stat("critical-minerals", sprintf("%.0f%%", li$au_share_world_production_pct),
+       sprintf("Australia's share of world lithium output, the %s producer", largest(li$au_world_rank)),
+       sprintf("Top three producer of %d critical minerals", n_top3)),
+  stat("intellectual-property", format(pat$n, big.mark = ","),
+       "Australian patent applications with a US applicant",
+       sprintf("Filed in %s", pat$year))
+)
+
+tile <- function(page, title, text, img) {
+  thumb <- if (file.exists(img)) sprintf('<img src="%s" alt="">', knitr::image_uri(img)) else ""
+  sprintf(paste0('<a class="ov-tile" href="#%s" data-page="%s"><div class="ov-thumb">%s</div>',
+                 '<div class="ov-tile-body"><p class="ov-tile-title">%s</p><p class="ov-tile-text">%s</p>',
+                 '<div class="ov-tile-go">EXPLORE &rarr;</div></div></a>'),
+          page, page, thumb, title, text)
+}
+
+tiles <- c(
+  tile("economy", "Economy", "Size, growth and productivity of the two economies, and how Australia compares with US states.", "Economy/au_vs_us_states.png"),
+  tile("trade-overview", "Trade", "Goods and services flows each way, the US share of Australia's trade and the bilateral balance.", "Trade/us_au_trade_balance.png"),
+  tile("foreign-investment", "Investment", "Two-way investment positions with the United States and Australia's other partners.", "Investment/iip_levels_latest.png"),
+  tile("critical-minerals", "Critical minerals", "Mines and deposits, Australia's share of world supply and US import reliance.", "Critical minerals/minerals_au_world_share_us_reliance.png"),
+  tile("energy", "Energy", "Australia's generation mix, the cost of new renewables and wholesale prices against US markets.", "Energy/07_wholesale_prices_au_us.png"),
+  tile("data-centres", "Data centres", "The investment surge in information media and telecommunications capital spending.", "Data centres/02_divj_share.png"),
+  tile("technology", "Technology", "Research strengths in critical technologies and collaboration with the US and China.", "Tech/D_collaboration_partners.png"),
+  tile("intellectual-property", "Intellectual property", "US patents and trade marks in Australia and joint US-Australian filings.", "Patents/us_au_coapplied_trend.png"),
+  tile("migration", "Migration", "Net overseas migration of US-born people to Australia, nationally and by state.", "Migration/nom_usa_states.png")
+)
+
+arcs <- paste0(
+  '<svg class="ov-arcs" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">',
+  '<g fill="none" stroke="#F2A900" stroke-width="1.4" stroke-dasharray="3 6">',
+  '<path d="M470 330 C 380 120, 220 60, 90 110"/>',
+  '<path d="M470 330 C 400 170, 270 120, 140 150"/>',
+  '<path d="M470 330 C 430 230, 330 190, 210 205"/>',
+  '</g>',
+  '<g fill="#FFFFFF" fill-opacity="0.9">',
+  '<circle cx="470" cy="330" r="5"/><circle cx="90" cy="110" r="4"/>',
+  '<circle cx="140" cy="150" r="3.5"/><circle cx="210" cy="205" r="3.5"/></g>',
+  '<g fill="none" stroke="#FFFFFF" stroke-opacity="0.12">',
+  paste(sprintf('<circle cx="470" cy="330" r="%d"/>', seq(60, 420, 60)), collapse = ""),
+  '</g></svg>')
+
+maps <- paste0(
+  '<div class="ov-context">',
+  '<figure class="ov-figure"><img src="', knitr::image_uri("Overview/US-Australia distance map.png"), '" alt="">',
+  '<figcaption>Distances across the Pacific from Australian cities to US cities and territories.</figcaption></figure>',
+  '<figure class="ov-figure"><img src="', knitr::image_uri("Overview/australia_over_us.png"), '" alt="">',
+  '<figcaption>Australia and the contiguous United States drawn at the same scale.</figcaption></figure>',
+  '</div>')
+
 cat(paste0(
-  '<div class="landing">',
-  '<h1 class="landing-title">Australia and the United States</h1>',
-  '<div class="landing-copy">',
-  '<p class="landing-lede">an interactive tool that maps the full breadth of the U.S.-Australia economic and strategic relationship, spanning trade, investment, critical minerals, energy, migration, IP collaboration and critical technologies.</p>',
-  '<p class="landing-meta">Last updated ', trimws(format(Sys.Date(), "%e %B %Y")),
-  '. Updated quarterly. Sources: ABS, DFAT, US Bureau of Economic Analysis, Geoscience Australia, IP Australia, OpenAlex, ADHA and DCCEEW.</p>',
+  '<div class="ov">',
+  '<section class="ov-hero">', arcs,
+  '<div class="ov-kicker">CSIS Australia Chair</div>',
+  '<h1 class="ov-title">Australia and the United States</h1>',
+  '<p class="ov-lede">An interactive guide to the full breadth of the US&ndash;Australia economic and strategic relationship: trade, investment, critical minerals, energy, technology, migration and innovation.</p>',
+  '<div class="ov-meta">Updated quarterly &middot; Last updated <b>', trimws(format(Sys.Date(), "%e %B %Y")), '</b></div>',
+  '</section>',
+  '<div class="ov-stats">', paste(stats, collapse = ""), '</div>',
+  '<section class="ov-section"><h2 class="ov-h2">Explore the relationship</h2>',
+  '<p class="ov-sub">Each section opens a page of charts drawn from official US and Australian data.</p>',
+  '<div class="ov-grid">', paste(tiles, collapse = ""), '</div></section>',
+  '<section class="ov-section"><h2 class="ov-h2">Across the Pacific</h2>',
+  '<p class="ov-sub">Two continent-sized countries, almost 16,000 kilometres apart from Canberra to Washington.</p>', maps, '</section>',
+  '<p class="ov-sources">Sources: ABS, DFAT, US Bureau of Economic Analysis, USGS, Geoscience Australia, IRENA, AEMO, CAISO, ERCOT, IP Australia, OpenAlex and DCCEEW.</p>',
   '</div>',
-  '</div>'
+  # Make the tiles and numbers switch dashboard pages like the top navigation does
+  '<script>document.addEventListener("click", function (e) {',
+  '  var a = e.target.closest("[data-page]"); if (!a) return;',
+  '  var nav = document.querySelector(\'.navbar .nav-link[href="#\' + a.dataset.page + \'"]\');',
+  '  if (nav) { e.preventDefault(); nav.click(); window.scrollTo(0, 0); }',
+  '});</script>'
 ))
 ```
 :::
-
-## Row {height="76%"}
-
-### Column {width="50%"}
-
-![](<Overview/US-Australia distance map.png>){title="Distance between Australia and the United States"}
-
-### Column {width="50%"}
-
-![](Overview/australia_over_us.png){title="Australia vs. US states"}
 
 
 # Economy {orientation="columns"}

@@ -1604,6 +1604,12 @@ theme_dash <- theme_minimal(base_size = 11) +
         plot.caption     = element_text(hjust = 0, colour = "grey40", size = 8),
         panel.grid.minor = element_blank())
 
+# Long service names push the title off the edge of the chart, so wrap it
+service_title <- function(fm, svc) {
+  svc <- str_remove(svc, regex("\\s*n\\.i\\.e\\.?$", ignore_case = TRUE))
+  str_wrap(paste0(fm$title, ": ", svc), width = 75)
+}
+
 src_caption <- function(tab) {
   sprintf("Source: ABS, International Trade: Supplementary Information, Calendar Year (Table %s). Gaps = not published (np).", tab)
 }
@@ -1641,7 +1647,7 @@ for (fl in names(flow_meta)) {
       scale_y_continuous(labels = percent_format(accuracy = 1),
                          limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
       scale_x_continuous(breaks = pretty_breaks(n = 8)) +
-      labs(title    = paste0(fm$title, ": ", svc),
+      labs(title    = service_title(fm, svc),
            subtitle = sprintf("United States as a share of total Australian services %s, calendar years", fm$short),
            caption  = src_caption(tab),
            x = NULL, y = "Share of total (%)") +

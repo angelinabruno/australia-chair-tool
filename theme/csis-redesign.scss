@@ -1,0 +1,164 @@
+/*-- scss:defaults --*/
+// Trial theme for '2b. Australia Chair Tool - redesign.qmd'.
+// Layered on top of cosmo, so every page picks up the colours and fonts;
+// the Overview page also uses the .ov-* classes below.
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap');
+
+$navy:      #00205B;
+$navy-2:    #0B3A7A;
+$gold:      #F2A900;
+$teal:      #0098A8;
+$ink:       #1F2A3A;
+$muted:     #5A6475;
+$paper:     #F5F6F8;
+$rule:      #E3E6EB;
+
+$primary:                 $navy;
+$body-bg:                 $paper;
+$body-color:              $ink;
+$font-family-sans-serif:  "Source Sans 3", "Segoe UI", Arial, sans-serif;
+$headings-font-family:    "Source Serif 4", Georgia, serif;
+$link-color:              $navy-2;
+$navbar-bg:               $navy;
+$navbar-fg:               rgba(255, 255, 255, 0.82);
+$navbar-hl:               #FFFFFF;
+$border-radius:           6px;
+
+/*-- scss:rules --*/
+
+// ---- Navigation bar ---------------------------------------------------------
+.navbar {
+  background: $navy !important;
+  border-bottom: 3px solid $gold;
+  .navbar-brand, .navbar-title { color: #fff !important; font-family: $headings-font-family; font-weight: 600; }
+  .nav-link { color: rgba(255,255,255,0.78) !important; font-weight: 600; letter-spacing: 0.01em; }
+  .nav-link:hover { color: #fff !important; }
+  .nav-link.active {
+    color: #fff !important;
+    background: transparent !important;
+    box-shadow: inset 0 -3px 0 $gold;
+  }
+}
+
+// ---- Cards on every page ------------------------------------------------------
+.card {
+  border: 1px solid $rule;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.04);
+}
+.card-header {
+  background: #fff;
+  border-bottom: 1px solid $rule;
+  font-weight: 600;
+  color: $navy;
+}
+.nav-tabs .nav-link.active { color: $navy; border-bottom: 2px solid $gold; }
+
+// ---- Overview page --------------------------------------------------------------
+.ov-card, .ov-card .card-body { background: transparent; border: 0; box-shadow: none; padding: 0; }
+
+.ov { max-width: 1280px; margin: 0 auto; padding: 0 4px 40px; }
+
+// Hero
+.ov-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  padding: 56px 56px 48px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(242,169,0,0.18), transparent 45%),
+    linear-gradient(120deg, $navy 0%, $navy-2 100%);
+}
+.ov-hero svg.ov-arcs {
+  position: absolute; right: -40px; top: 0; height: 100%; width: 62%;
+  opacity: 0.55; pointer-events: none;
+}
+.ov-kicker {
+  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: $gold; margin-bottom: 14px;
+}
+.ov-title {
+  font-family: $headings-font-family; font-weight: 600;
+  font-size: clamp(2.1rem, 4.2vw, 3.4rem); line-height: 1.08;
+  margin: 0 0 18px; color: #fff; max-width: 20ch;
+}
+.ov-lede { font-size: 1.15rem; line-height: 1.55; max-width: 58ch; color: rgba(255,255,255,0.88); margin: 0 0 26px; }
+.ov-meta { font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.65); }
+.ov-meta b { color: #fff; font-weight: 600; }
+
+// Section headings
+.ov-section { margin-top: 40px; }
+.ov-h2 {
+  font-family: $headings-font-family; font-weight: 600; font-size: 1.5rem; color: $navy;
+  margin: 0 0 4px;
+}
+.ov-sub { color: $muted; margin: 0 0 18px; font-size: 0.98rem; }
+
+// Headline numbers
+.ov-stats {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-top: -34px; position: relative; z-index: 2; padding: 0 24px;
+}
+.ov-stat {
+  display: block; text-decoration: none !important; color: inherit;
+  background: #fff; border-radius: 8px; padding: 18px 18px 16px;
+  border-top: 4px solid $gold;
+  box-shadow: 0 6px 18px rgba(0, 32, 91, 0.10);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.ov-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 32, 91, 0.16); }
+.ov-stat-num {
+  font-family: $headings-font-family; font-weight: 600; color: $navy;
+  font-size: 2.1rem; line-height: 1.1; margin-bottom: 6px; white-space: nowrap;
+  small { font-size: 0.6em; margin-left: 2px; color: $muted; font-family: $font-family-sans-serif; font-weight: 600; }
+}
+.ov-stat-label { color: $ink; font-size: 0.95rem; line-height: 1.35; }
+.ov-stat-note { color: $muted; font-size: 0.78rem; margin-top: 8px; }
+
+// Explore grid
+.ov-grid { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px)  { .ov-grid { grid-template-columns: 1fr; } }
+.ov-tile {
+  display: flex; flex-direction: column; text-decoration: none !important; color: inherit;
+  background: #fff; border: 1px solid $rule; border-radius: 8px; overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.ov-tile:hover { transform: translateY(-2px); border-color: lighten($navy, 55%); box-shadow: 0 8px 22px rgba(0, 32, 91, 0.12); }
+.ov-thumb {
+  height: 150px; background: #fff; border-bottom: 1px solid $rule;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.ov-thumb { padding: 10px; }
+.ov-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.ov-tile-body { padding: 14px 16px 16px; }
+.ov-tile-title { font-family: $headings-font-family; font-weight: 600; color: $navy; font-size: 1.12rem; margin: 0 0 4px; }
+.ov-tile-text { color: $muted; font-size: 0.92rem; line-height: 1.4; margin: 0; }
+.ov-tile-go { color: $navy-2; font-weight: 700; font-size: 0.82rem; margin-top: 10px; letter-spacing: 0.04em; }
+
+// Context: the two maps
+.ov-context { display: grid; gap: 18px; grid-template-columns: 3fr 2fr; }
+.ov-figure { background: #fff; border: 1px solid $rule; border-radius: 8px; padding: 14px; margin: 0; }
+.ov-figure img { width: 100%; height: auto; display: block; }
+.ov-figure figcaption { color: $muted; font-size: 0.85rem; margin-top: 8px; }
+
+.ov-sources { color: $muted; font-size: 0.8rem; margin-top: 32px; border-top: 1px solid $rule; padding-top: 14px; }
+
+@media (max-width: 900px) {
+  .ov-hero { padding: 36px 24px 56px; }
+  .ov-hero svg.ov-arcs { width: 100%; opacity: 0.25; }
+  .ov-stats { padding: 0 10px; }
+  .ov-context { grid-template-columns: 1fr; }
+}
+
+// Quarto dashboards turn divs inside cards into flex columns ("fill"
+// containers); keep the number and its unit on one line.
+.ov .ov-stat-num { display: block !important; }
+.ov .ov-stat-num small { display: inline !important; }
+
+.ov .ov-meta { display: block !important; }
+.ov .ov-meta b { display: inline !important; }
+.ov .ov-thumb { height: 170px; }

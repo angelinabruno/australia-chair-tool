@@ -24,7 +24,7 @@ Sys.setenv(DASHBOARD_DIR = normalizePath(DASHBOARD_DIR, winslash = "/"))
   "1e. Energy.R",
   "1f. Trade.R",
   "1g. Migration.R",
-  "1h. Patents.R",             # the slowest: downloads a ~1.3 GB zip from IP RAPID
+#  "1h. Patents.R",             # the slowest: downloads a ~1.3 GB zip from IP RAPID
                                # (reused for 30 days). Put # in front to skip it.
   "1i. Investment.R",
   "1j. Critical minerals.R"     # USGS world shares; reused once downloaded

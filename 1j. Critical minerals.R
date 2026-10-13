@@ -269,7 +269,7 @@ MCS_SOURCE <- sprintf(paste0("Source: USGS, Mineral Commodity Summaries %d data 
 # 5. CHART 1 - Australia's share of world production next to US import needs
 # ------------------------------------------------------------------------------
 
-panels <- c(share           = "Australia's share of\nworld production",
+panels <- c(share           = "Australia's share of\nworld production and world ranking",
             nir             = "US net import reliance\n(share of US use imported)",
             au_import_share = "Australia's share of\nUS imports, 2021-24")
 
