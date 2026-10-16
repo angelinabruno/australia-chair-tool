@@ -99,7 +99,7 @@ tiles <- c(
   tile("data-centres", "Data centres", "The investment surge in information media and telecommunications capital spending.", "Data centres/02_divj_share.png"),
   tile("technology", "Technology", "Research strengths in critical technologies and collaboration with the US and China.", "Tech/D_collaboration_partners.png"),
   tile("intellectual-property", "Intellectual property", "US patents and trade marks in Australia and joint US-Australian filings.", "Patents/us_au_coapplied_trend.png"),
-  tile("migration", "Migration", "Net overseas migration of US-born people to Australia, nationally and by state.", "Migration/nom_usa_states.png")
+  tile("migration", "Migration", "Two-way skilled and student flows: E-3 visas and jobs, and US professionals and students in Australia.", "Migration/e3_visas_australians.png")
 )
 
 arcs <- paste0(
@@ -721,10 +721,42 @@ map
 
 # Migration {orientation="columns"}
 
-## Column {width="50%"}
+## Column {.tabset width="50%"}
 
-![](Migration/nom_usa_national.png){title="Net overseas migration from the United States"}
+### E-3 visas
 
-## Column {width="50%"}
+![](Migration/e3_visas_australians.png){title="E-3 visas issued to Australians"}
 
-![](Migration/nom_usa_states.png){title="Net overseas migration from the United States, by state"}
+### E-3 jobs by occupation
+
+![](Migration/e3_jobs_by_occupation.png){title="E-3 jobs certified for Australians, by occupation group"}
+
+### E-3 jobs over time
+
+![](Migration/e3_jobs_trend.png){title="E-3 jobs certified for Australians by occupation group, over time"}
+
+### E-3 employers and cities
+
+![](Migration/e3_employers_cities.png){title="E-3 jobs certified for Australians: top employers and worksite cities"}
+
+### Students and exchange
+
+![](Migration/student_exchange_visas_australians.png){title="Student and exchange visitor visas issued to Australians"}
+
+## Column {.tabset width="50%"}
+
+### US skilled workers in Australia
+
+![](Migration/us_citizens_skilled_visas_occupation.png){title="US citizens on Australian temporary skilled visas, by occupation"}
+
+### US citizens on temporary visas
+
+![](Migration/us_citizens_temporary_visas.png){title="US citizens on temporary work, study and graduate visas in Australia"}
+
+### Net migration (by birthplace)
+
+![](Migration/nom_usa_national.png){title="Net overseas migration of USA-born people"}
+
+### Net migration by state
+
+![](Migration/nom_usa_states.png){title="Net overseas migration of USA-born people, by state"}

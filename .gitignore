@@ -76,6 +76,14 @@ Critical minerals/**
 !Critical minerals/minerals_au_*.png
 !Migration/nom_usa_national.png
 !Migration/nom_usa_states.png
+!Migration/e3_visas_australians.png
+!Migration/e3_jobs_by_occupation.png
+!Migration/e3_jobs_trend.png
+!Migration/e3_employers_cities.png
+!Migration/student_exchange_visas_australians.png
+!Migration/us_citizens_skilled_visas_occupation.png
+!Migration/us_citizens_temporary_visas.png
+!Migration/*.py
 !Patents/us_*.png
 !Patents/tm_*.png
 !Tech/[A-F]_*.png
