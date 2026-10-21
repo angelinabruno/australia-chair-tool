@@ -1,0 +1,124 @@
+<!-- Added to the end of the dashboard by '2. Australia Chair Tool.qmd'
+     (include-after-body). Two jobs:
+     1. Groups some pages into drop-down menus in the top bar.
+     2. Adds the A$ / US$ toggle at the left of the top bar. Charts with a US$
+        version carry it in data-usd (see theme/currency.lua); headline numbers
+        carry both versions in data-aud-text / data-usd-text. -->
+<script>
+(function () {
+  // ---- 1. Drop-down menus ------------------------------------------------
+  // Menu label, then the pages in it: [page id, name shown in the menu].
+  // Page ids are the page titles in the .qmd, lower case, spaces as hyphens.
+  var MENUS = [
+    ["Economies",  [["economic-indicators", "Economic indicators"],
+                    ["intellectual-property", "Intellectual property"]]],
+    ["Trade",      [["trade-overview", "Overview"],
+                    ["trade-in-goods", "Trade in goods"],
+                    ["trade-in-services", "Trade in services"]]],
+    ["Technology", [["research-and-ai", "Research and AI"],
+                    ["data-centres", "Data centres"]]]
+  ];
+
+  var navList = document.querySelector(".navbar .navbar-nav");
+  if (navList) {
+    MENUS.forEach(function (menu, m) {
+      var links = menu[1].map(function (p) {
+        return navList.querySelector('.nav-link[data-bs-target="#' + p[0] + '"]');
+      }).filter(Boolean);
+      if (!links.length) return;
+
+      var li = document.createElement("li");
+      li.className = "nav-item dropdown";
+      var toggle = document.createElement("a");
+      toggle.className = "nav-link dropdown-toggle";
+      toggle.href = "#";
+      toggle.id = "nav-menu-" + m;
+      toggle.setAttribute("role", "button");
+      toggle.setAttribute("data-bs-toggle", "dropdown");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.innerHTML = '<span class="nav-link-text">' + menu[0] + "</span>";
+      var ul = document.createElement("ul");
+      ul.className = "dropdown-menu";
+      ul.setAttribute("aria-labelledby", toggle.id);
+
+      // The menu takes the place of its first page in the bar.
+      links[0].closest("li").before(li);
+      links.forEach(function (a) {
+        var label = menu[1].filter(function (p) {
+          return a.getAttribute("data-bs-target") === "#" + p[0];
+        })[0][1];
+        var oldLi = a.closest("li");
+        a.classList.add("dropdown-item");
+        a.querySelector(".nav-link-text").textContent = label;
+        var item = document.createElement("li");
+        item.appendChild(a);
+        ul.appendChild(item);
+        oldLi.remove();
+      });
+      li.appendChild(toggle);
+      li.appendChild(ul);
+    });
+
+    // Highlight the menu whose page is showing.
+    function markMenus() {
+      navList.querySelectorAll(".nav-item.dropdown").forEach(function (li) {
+        var on = !!li.querySelector(".dropdown-item.active");
+        li.querySelector(".dropdown-toggle").classList.toggle("menu-active", on);
+      });
+    }
+    navList.addEventListener("shown.bs.tab", markMenus);
+    // Bootstrap's own tab handler doesn't fire for links moved into a menu,
+    // so open the page here, close the menu and keep the address in step.
+    navList.addEventListener("click", function (e) {
+      var a = e.target.closest(".dropdown-item");
+      if (!a) return;
+      e.preventDefault();
+      bootstrap.Tab.getOrCreateInstance(a).show();
+      var t = a.closest(".dropdown").querySelector(".dropdown-toggle");
+      bootstrap.Dropdown.getOrCreateInstance(t).hide();
+      history.replaceState(null, "", a.getAttribute("href"));
+      window.scrollTo(0, 0);
+      markMenus();
+    });
+    markMenus();
+  }
+
+  // ---- 2. A$ / US$ toggle ----------------------------------------------------
+  var KEY = "csis-au-tool-currency";
+  var bar = document.querySelector(".navbar .navbar-brand-container");
+  var box = document.createElement("div");
+  box.className = "cur-toggle";
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", "Currency for all charts");
+  box.innerHTML =
+    '<button type="button" data-cur="AUD" title="Show all charts in Australian dollars">A$</button>' +
+    '<button type="button" data-cur="USD" title="Show all charts in US dollars">US$</button>';
+  if (bar) bar.after(box);
+
+  function apply(cur) {
+    document.documentElement.setAttribute("data-currency", cur);
+    document.querySelectorAll("img[data-usd]").forEach(function (img) {
+      if (!img.dataset.aud) img.dataset.aud = img.getAttribute("src");
+      img.setAttribute("src", cur === "USD" ? img.dataset.usd : img.dataset.aud);
+    });
+    document.querySelectorAll("[data-usd-text]").forEach(function (el) {
+      el.innerHTML = cur === "USD" ? el.dataset.usdText : el.dataset.audText;
+    });
+    box.querySelectorAll("button").forEach(function (b) {
+      var on = b.dataset.cur === cur;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", on);
+    });
+    try { localStorage.setItem(KEY, cur); } catch (e) {}
+  }
+
+  box.addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (b) apply(b.dataset.cur);
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  apply(saved === "USD" ? "USD" : "AUD");
+})();
+</script>

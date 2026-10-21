@@ -4,6 +4,7 @@ rm(list = ls())
 if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Investment"))
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
 # ==============================================================================
 # Foreign investment.R  -  two-way investment between Australia and its partners
 #
@@ -241,7 +242,10 @@ iip <- bind_rows(
   foreign |> mutate(direction = "Foreign investment in Australia"),
   abroad  |> mutate(direction = "Australian investment abroad")
 ) |>
-  mutate(value_bn = value_m / 1000)
+  mutate(value_bn = value_m / 1000,
+         # Positions are stocks at 31 December, so US$ uses the rate on that date.
+         usd_per_aud  = fx_on(as.Date(paste0(year, "-12-31"))),
+         value_bn_usd = value_bn * usd_per_aud)
 
 write.csv(iip, file.path(OUT_DIR, "iip_levels_latest.csv"), row.names = FALSE)
 
@@ -267,18 +271,21 @@ partner_order <- iip |>
   arrange(value_bn) |>
   pull(partner)
 
+# Drawn twice, in A$ and US$ (at the exchange rate on 31 December).
+make_iip <- function(cur) {
 plot_dat <- iip |>
   mutate(
+    value_bn  = if (cur == "USD") value_bn_usd else value_bn,
     partner   = factor(partner, levels = partner_order),
     # second level is drawn on top within each pair
     direction = factor(direction, levels = c("Foreign investment in Australia",
                                              "Australian investment abroad")),
-    label     = dollar(value_bn, accuracy = 1, suffix = "bn", big.mark = ",")
+    label     = dollar(value_bn, accuracy = 1, prefix = cur_sym[[cur]], suffix = "bn", big.mark = ",")
   )
 
 x_max <- max(plot_dat$value_bn, na.rm = TRUE) * 1.12   # headroom for value labels
 
-p_iip <- ggplot(plot_dat, aes(x = value_bn, y = partner, fill = direction)) +
+ggplot(plot_dat, aes(x = value_bn, y = partner, fill = direction)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.75, na.rm = TRUE) +
   geom_text(aes(label = label), hjust = -0.1,
             position = position_dodge(width = 0.8),
@@ -287,14 +294,16 @@ p_iip <- ggplot(plot_dat, aes(x = value_bn, y = partner, fill = direction)) +
                                "Foreign investment in Australia" = csis_navy),
                     breaks = c("Australian investment abroad",
                                "Foreign investment in Australia")) +
-  scale_x_continuous(labels = dollar_format(suffix = "bn", big.mark = ","),
+  scale_x_continuous(labels = dollar_format(prefix = cur_sym[[cur]], suffix = "bn", big.mark = ","),
                      limits = c(0, x_max),
                      expand = expansion(mult = c(0, 0))) +
   labs(
     title    = sprintf("Two-way investment between Australia and its partners, %d", YEAR),
-    subtitle = sprintf("Level of investment at 31 December %d, A$ billion", YEAR),
+    subtitle = sprintf("Level of investment at 31 December %d, %s billion", YEAR, cur_sym[[cur]]),
     caption  = paste("Source: ABS, International Investment Position, Australia:",
-                     "Supplementary Statistics, Tables 2 and 5."),
+                     "Supplementary Statistics, Tables 2 and 5.",
+                     if (cur == "USD") "
+Converted to US$ at the RBA exchange rate on 31 December." else ""),
     x = NULL, y = NULL, fill = NULL
   ) +
   theme_minimal(base_size = 12, base_family = font_family) +
@@ -312,8 +321,9 @@ p_iip <- ggplot(plot_dat, aes(x = value_bn, y = partner, fill = direction)) +
     axis.text          = element_text(colour = csis_grey),
     plot.margin        = margin(10, 25, 10, 10)    # room for the last axis label
   )
+}
 
-ggsave(file.path(OUT_DIR, "iip_levels_latest.png"), p_iip,
-       width = 9, height = 5.5, dpi = 300, bg = "white")
+save_both(make_iip, file.path(OUT_DIR, "iip_levels_latest.png"),
+          function(p, f) ggsave(f, p, width = 9, height = 5.5, dpi = 300, bg = "white"))
 
 message("Saved ", file.path(OUT_DIR, "iip_levels_latest.png"))

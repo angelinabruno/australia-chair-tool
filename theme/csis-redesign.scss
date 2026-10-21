@@ -162,3 +162,41 @@ $border-radius:           6px;
 .ov .ov-meta { display: block !important; }
 .ov .ov-meta b { display: inline !important; }
 .ov .ov-thumb { height: 170px; }
+
+// ---- A$ / US$ toggle (top bar, left; see theme/navigation.html) -------------
+.navbar .cur-toggle {
+  display: inline-flex; margin: 0 14px 0 4px; flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; overflow: hidden;
+  button {
+    border: 0; background: transparent; color: rgba(255,255,255,0.78);
+    font: inherit; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em;
+    padding: 3px 11px; cursor: pointer; line-height: 1.4;
+  }
+  button.is-on { background: $gold; color: $navy; }
+  button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+}
+
+// ---- Drop-down menus in the top bar ----------------------------------------
+.navbar .dropdown-menu {
+  background: #fff; border: 1px solid $rule; border-radius: 6px;
+  box-shadow: 0 8px 22px rgba(0, 32, 91, 0.16); padding: 6px 0; min-width: 13rem;
+  .dropdown-item, .dropdown-item.nav-link {
+    color: $ink !important; font-weight: 600; padding: 7px 16px; box-shadow: none !important;
+  }
+  .dropdown-item:hover { background: $paper; color: $navy !important; }
+  .dropdown-item.active { background: $paper; color: $navy !important; box-shadow: inset 3px 0 0 $gold !important; }
+}
+.navbar .dropdown-toggle.menu-active { color: #fff !important; box-shadow: inset 0 -3px 0 $gold; }
+
+// ---- Column headings on split pages ("title" on a tabset column) -------------
+.bslib-navs-card-title .card-title, .card-header .card-title {
+  font-family: $headings-font-family; color: $navy; font-weight: 600;
+}
+
+// ---- Size, coastline and population under the overlay map -------------------
+.ov .ov-facts { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.88rem; }
+.ov .ov-facts th, .ov .ov-facts td { padding: 6px 8px; border-top: 1px solid $rule; text-align: right; vertical-align: top; }
+.ov .ov-facts thead th { border-top: 0; color: $navy; font-weight: 700; }
+.ov .ov-facts tbody th { text-align: left; color: $ink; font-weight: 600; }
+.ov .ov-facts td small { display: block; color: $muted; }
+.ov .ov-facts-note { color: $muted; font-size: 0.76rem; margin: 8px 0 0; }

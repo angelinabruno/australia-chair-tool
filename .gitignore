@@ -7,6 +7,7 @@
 *.html
 !/2. Australia Chair Tool.html
 !/index.html
+!/theme/navigation.html
 *.pptx
 .Rhistory
 .RData
@@ -56,7 +57,6 @@ Critical minerals/**
 !Trade/abs_services_balance.png
 !Trade/dfat_*.png
 !Trade/overview_us_share_by_service.png
-!Trade/goods_vs_services_us_share.png
 !Trade/services_imports_us.png
 !Trade/us_au_trade_balance.png
 !Trade/goods_exports_*.png
@@ -87,3 +87,10 @@ Critical minerals/**
 !Patents/us_*.png
 !Patents/tm_*.png
 !Tech/[A-F]_*.png
+
+# US$ versions of the money charts (the A$/US$ toggle; see "0. Exchange rates.R")
+!Economy/*_usd.png
+!Trade/*_usd.png
+!Investment/*_usd.png
+!Data centres/*_usd.png
+!Energy/*_usd.png

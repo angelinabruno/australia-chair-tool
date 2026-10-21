@@ -4,6 +4,7 @@ rm(list = ls())
 if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Energy"))
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
 
 # ==============================================================================
 # Australian energy: five charts for a US policy audience
@@ -534,30 +535,42 @@ au_us_cols <- c("Australia" = "#eda100", "United States" = "#00205B")
 # From 2015: the 2010-12 solar costs (up to $490/MWh) would flatten the recent comparison.
 lcoe_plot <- lcoe |> filter(year >= 2015)
 
-p6 <- ggplot(lcoe_plot, aes(year, lcoe, colour = country)) +
+# Drawn twice. IRENA's figures are in constant (real) US$ of lcoe_yr, so the
+# A$ version converts every year at that one year's average rate.
+lcoe_rate <- fx_calendar_year(lcoe_yr)
+make_p6 <- function(cur) {
+conv <- if (cur == "AUD") 1 / lcoe_rate else 1
+lcoe_plot   <- lcoe_plot   |> mutate(lcoe = lcoe * conv)
+lcoe_latest <- lcoe_latest |> mutate(lcoe = lcoe * conv)
+ggplot(lcoe_plot, aes(year, lcoe, colour = country)) +
   geom_line(linewidth = 1) +
   geom_point(size = 1.4) +
-  ggrepel::geom_text_repel(data = lcoe_latest, aes(label = paste0("$", round(lcoe))),
+  ggrepel::geom_text_repel(data = lcoe_latest, aes(label = paste0(cur_sym[[cur]], round(lcoe))),
                            nudge_x = 0.6, direction = "y", hjust = 0, size = 3.2,
                            segment.colour = NA, min.segment.length = Inf, show.legend = FALSE) +
   facet_wrap(~ technology) +
   scale_colour_manual(values = au_us_cols) +
-  scale_y_continuous(labels = label_dollar(), limits = c(0, NA),
+  scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]]), limits = c(0, NA),
                      expand = expansion(c(0, 0.05))) +
   scale_x_continuous(breaks = seq(2015, 2025, 2), expand = expansion(mult = c(0.02, 0.14))) +
   labs(
     title    = "Levelised cost of new solar and wind, Australia and the United States",
     subtitle = sprintf(paste0("Weighted-average levelised cost of electricity for new projects, ",
-                              "%d US$ per MWh, 2015-%d"), lcoe_yr, lcoe_yr),
+                              "%d %s per MWh, 2015-%d"), lcoe_yr, cur_sym[[cur]], lcoe_yr),
     x = NULL, y = NULL,
     caption  = paste0("Source: IRENA (2026), Renewable Power Generation Costs in 2025, data file ",
                       "(Fig. 2.11 and Fig. 3.7).\nLCOE excludes subsidies and tax credits, ",
-                      "so US figures are before federal tax credits.")
+                      "so US figures are before federal tax credits.",
+                      if (cur == "AUD") sprintf("
+Converted to A$ at the RBA's %d average exchange rate.", lcoe_yr) else "")
   ) +
   theme_csis() +
   theme(strip.text = element_text(face = "bold", size = 10))
+}
 
-ggsave("06_lcoe_au_us.png", p6, width = 9, height = 5, dpi = 150, bg = "white")
+save_both(make_p6, "06_lcoe_au_us.png",
+          function(p, f) ggsave(f, p, width = 9, height = 5, dpi = 150, bg = "white"))
+p6 <- make_p6("USD")   # the chart CSV below keeps IRENA's own US$ figures
 
 export_chart_csv(p6, "06_lcoe_au_us.csv",
                  y_format = "number", chart_type = "Faceted line with point markers",
@@ -763,16 +776,10 @@ if (has_ercot) {
   message("ERCOT: no data found, so Texas is left off the wholesale price chart.")
 }
 
-# --- RBA: monthly exchange rate (re-downloaded when over a week old) ---
-fx_path <- fetch_cached("https://www.rba.gov.au/statistics/tables/csv/f11-data.csv",
-                        file.path("raw", "rba_f11_monthly.csv"), max_age_days = 7)
-fx_raw <- read_csv(fx_path, skip = 1, col_names = FALSE, show_col_types = FALSE,
-                   col_types = cols(.default = col_character()))
-fx <- fx_raw |>
-  filter(grepl("^\\d{2}-[A-Za-z]{3}-\\d{4}$", X1)) |>          # data rows only, not the header block
-  transmute(date = as.Date(X1, format = "%d-%b-%Y"), aud_usd = as.numeric(X2)) |>
-  filter(!is.na(date), !is.na(aud_usd)) |>
-  transmute(month_start = as.Date(format(date, "%Y-%m-01")), aud_usd)
+# --- Exchange rate: each month's average of the RBA's daily A$/US$ rates ---
+# (from '0. Exchange rates.R', the same rule as every other chart's toggle)
+fx <- tibble(month_start = price_months, aud_usd = fx_month(price_months)) |>
+  filter(!is.na(aud_usd))
 
 missing_fx <- setdiff(price_months, fx$month_start)
 if (length(missing_fx) > 0)
@@ -780,13 +787,15 @@ if (length(missing_fx) > 0)
                                                         "%b %Y"), collapse = ", "),
           "; those months are left out.")
 
-# --- Quarterly averages in US$/MWh ---
+# --- Quarterly averages in US$/MWh and A$/MWh ---
 price_qtr <- bind_rows(
   nem_monthly |>
     inner_join(fx, by = "month_start") |>
-    mutate(usd = twa_aud * aud_usd),
-  caiso_monthly |> mutate(region = "California (SP15)"),
-  if (has_ercot) ercot_monthly |> mutate(region = "Texas (ERCOT)")
+    mutate(usd = twa_aud * aud_usd, aud = twa_aud),
+  caiso_monthly |> mutate(region = "California (SP15)") |>
+    inner_join(fx, by = "month_start") |> mutate(aud = usd / aud_usd),
+  if (has_ercot) ercot_monthly |> mutate(region = "Texas (ERCOT)") |>
+    inner_join(fx, by = "month_start") |> mutate(aud = usd / aud_usd)
 ) |>
   mutate(quarter = as.Date(paste0(format(month_start, "%Y-"),
                                   sprintf("%02d", (as.integer(format(month_start, "%m")) - 1) %/% 3 * 3 + 1),
@@ -794,6 +803,7 @@ price_qtr <- bind_rows(
   group_by(region, quarter) |>
   summarise(n_months  = n(),
             price_usd = weighted.mean(usd, minutes),
+            price_aud = weighted.mean(aud, minutes),
             twa_aud   = if (all(is.na(twa_aud))) NA_real_ else weighted.mean(twa_aud, minutes),
             vwa_aud   = if (all(is.na(vwa_aud))) NA_real_ else weighted.mean(vwa_aud, minutes),
             .groups = "drop") |>
@@ -811,35 +821,42 @@ price_q      <- max(price_latest$quarter)
 price_cols <- c("Texas (ERCOT)" = "#D2232A", "California (SP15)" = "#00205B",
                 NSW = "#eda100", QLD = "#993c1d", VIC = "#2a78d6", SA = "#1baf7a")
 
-p7 <- ggplot(price_qtr, aes(quarter, price_usd, colour = region)) +
+# Drawn twice: US$ (NEM converted) and A$ (US markets converted).
+make_p7 <- function(cur) {
+price_qtr    <- price_qtr    |> mutate(price = if (cur == "USD") price_usd else price_aud)
+price_latest <- price_latest |> mutate(price = if (cur == "USD") price_usd else price_aud)
+ggplot(price_qtr, aes(quarter, price, colour = region)) +
   geom_line(aes(linewidth = region %in% us_markets)) +
   geom_point(size = 1.4) +
-  ggrepel::geom_text_repel(data = price_latest, aes(label = paste0("$", round(price_usd))),
+  ggrepel::geom_text_repel(data = price_latest, aes(label = paste0(cur_sym[[cur]], round(price))),
                            nudge_x = 25, direction = "y", hjust = 0, size = 3.1,
                            segment.colour = NA, min.segment.length = Inf, show.legend = FALSE) +
   scale_linewidth_manual(values = c(`TRUE` = 1.4, `FALSE` = 0.7), guide = "none") +
   scale_colour_manual(values = price_cols) +
-  scale_y_continuous(labels = label_dollar(), limits = c(0, NA),
+  scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]]), limits = c(0, NA),
                      expand = expansion(c(0, 0.05))) +
   scale_x_date(breaks = seq(min(price_qtr$quarter), price_q, by = "6 months"),
                labels = qtr_label, expand = expansion(mult = c(0.02, 0.08))) +
   labs(
     title    = if (has_ercot) "Wholesale electricity prices, Australian NEM regions, California and Texas (ERCOT)"
                else "Wholesale electricity prices, Australian NEM regions and California",
-    subtitle = sprintf(paste0("Average wholesale spot price, US$ per MWh, quarterly, %s to %s. ",
+    subtitle = sprintf(paste0("Average wholesale spot price, %s per MWh, quarterly, %s to %s. ",
                               "Australian states are NEM regions."),
-                       qtr_label(min(price_qtr$quarter)), qtr_label(price_q)),
+                       cur_sym[[cur]], qtr_label(min(price_qtr$quarter)), qtr_label(price_q)),
     x = NULL, y = NULL,
     caption  = paste0("Sources: AEMO aggregated price and demand data (5-minute regional prices); ",
                       "CAISO OASIS (hourly day-ahead price, SP15 hub);\n",
                       if (has_ercot) "ERCOT (15-minute real-time price, hub average HB_HUBAVG); " else "",
-                      "RBA table F11 (monthly A$/US$ exchange rate, used to convert each month).\n",
+                      "RBA daily A$/US$ exchange rates, averaged for each month to convert that month.\n",
                       "Simple time-weighted averages of all intervals.",
                       if (has_ercot) "" else " Texas (ERCOT) not shown: no ERCOT data available on this run.")
   ) +
   theme_csis()
+}
 
-ggsave("07_wholesale_prices_au_us.png", p7, width = 9, height = 5.2, dpi = 150, bg = "white")
+save_both(make_p7, "07_wholesale_prices_au_us.png",
+          function(p, f) ggsave(f, p, width = 9, height = 5.2, dpi = 150, bg = "white"))
+p7 <- make_p7("USD")   # the chart CSV below stays in US$
 
 export_chart_csv(p7, "07_wholesale_prices_au_us.csv",
                  y_format = "number", chart_type = "Line with point markers",

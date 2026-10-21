@@ -4,6 +4,7 @@ rm(list = ls())
 if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Data centres"))
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
 
 # ABS 5625.0 Private New Capital Expenditure and Expected Expenditure
 # Data centre proxy: Information Media & Telecommunications (IMT)
@@ -179,6 +180,23 @@ cp <- dat %>%
     measure == "Expected LT" ~ fy_start(date) + 1L
   ))
 
+# US$ versions for the currency toggle. Actual quarters use that quarter's
+# average rate; expected full-year estimates use their financial year's average
+# (or the latest 12 months for years not yet under way).
+cp_usd <- cp %>%
+  mutate(rate  = fx_or_latest(if_else(measure == "Actual", fx_quarter(date),
+                                      fx_financial_year(ref_fy + 1L))),
+         value = value * rate) %>%
+  group_by(series_id) %>%
+  mutate(roll4 = roll4(value)) %>%
+  ungroup() %>%
+  select(-rate)
+cp_aud <- cp
+cp_for <- function(cur) if (cur == "USD") cp_usd else cp_aud
+y_lab  <- function(cur, extra = "") paste0(cur_sym[[cur]], " million", extra)
+src_cp <- function(cur, extra = "") paste(SRC, "Current price, original.", extra,
+                                          if (cur == "USD") fx_note[["USD"]] else "")
+
 # check counts per reference year (should be 4 actuals per FY)
 cp %>%
   filter(industry == IMT, asset == EPM, ref_fy >= 2018, !is.na(value)) %>%
@@ -190,7 +208,9 @@ cp %>%
 
 # 5. IMT capex by asset ---------------------------------------------------
 
-p1 <- cp %>%
+# Charts in A$ or US$ are drawn twice through save_both(); each make_*()
+# takes cur = "AUD" or "USD".
+make_p1 <- function(cur) cp_for(cur) %>%
   filter(measure == "Actual", industry == IMT) %>%
   ggplot(aes(date, roll4, colour = asset)) +
   geom_line(linewidth = 0.9) +
@@ -200,10 +220,10 @@ p1 <- cp %>%
   labs(
     title    = "Information Media & Telecommunications capital expenditure by asset type",
     subtitle = "Information Media & Telecommunications capital expenditure, rolling four-quarter sum",
-    y = "A$ million", x = NULL,
-    caption  = paste(SRC, "Current price, original.")
+    y = y_lab(cur), x = NULL,
+    caption  = src_cp(cur)
   )
-save_csis(p1, "01_divj_by_asset.png")
+save_both(make_p1, "01_divj_by_asset.png", save_csis)
 
 
 # 6. IMT share of total ---------------------------------------------------
@@ -233,7 +253,7 @@ save_csis(p2, "02_divj_share.png")
 
 hl <- c(IMT, "Mining")
 
-spaghetti <- function(df, ttl, sub) {
+spaghetti <- function(df, ttl, sub, cur) {
   ggplot() +
     geom_line(data = filter(df, !industry %in% hl),
               aes(date, plot_val, group = industry),
@@ -244,27 +264,27 @@ spaghetti <- function(df, ttl, sub) {
                                             csis_colours[["navy"]]), hl)) +
     scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
     scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
-    labs(title = ttl, subtitle = sub, y = "A$ million", x = NULL,
-         caption = paste(SRC, "Current price, original."))
+    labs(title = ttl, subtitle = sub, y = y_lab(cur), x = NULL,
+         caption = src_cp(cur))
 }
 
-p3 <- cp %>%
+make_p3 <- function(cur) cp_for(cur) %>%
   filter(measure == "Actual", asset == EPM,
          !industry %in% c("Total", "Non-Mining"), !is.na(roll4)) %>%
   mutate(plot_val = roll4) %>%
   spaghetti("Equipment, plant and machinery capex by industry",
             paste("Actual equipment, plant and machinery by industry,",
-                  "rolling four-quarter sum; grey lines are other industries"))
-save_csis(p3, "03_epm_actual_by_industry.png")
+                  "rolling four-quarter sum; grey lines are other industries"), cur)
+save_both(make_p3, "03_epm_actual_by_industry.png", save_csis)
 
-p4 <- cp %>%
+make_p4 <- function(cur) cp_for(cur) %>%
   filter(measure == "Expected ST", asset == EPM,
          !industry %in% c("Total", "Non-Mining"), !is.na(value)) %>%
   mutate(plot_val = value) %>%
   spaghetti("Expected equipment, plant and machinery capex by industry",
             paste("Short term expected equipment capex (current financial year)",
-                  "by industry; grey lines are other industries"))
-save_csis(p4, "04_epm_expected_by_industry.png")
+                  "by industry; grey lines are other industries"), cur)
+save_both(make_p4, "04_epm_expected_by_industry.png", save_csis)
 
 
 # 8. Actual vs expected ---------------------------------------------------
@@ -275,8 +295,8 @@ lbl <- c("Actual" = "Actual (rolling 4-qtr sum)",
          "Expected ST" = "Expected, current year",
          "Expected LT" = "Expected, next year")
 
-plot_actual_vs_expected <- function(ind, ast, ttl, sub, from = as.Date("1987-01-01")) {
-  d <- cp %>%
+plot_actual_vs_expected <- function(ind, ast, ttl, sub, from = as.Date("1987-01-01"), cur = "AUD") {
+  d <- cp_for(cur) %>%
     filter(industry == ind, asset == ast, date >= from) %>%
     mutate(plot_val = if_else(measure == "Actual", roll4, value),
            series   = factor(lbl[measure], levels = unname(lbl))) %>%
@@ -289,54 +309,57 @@ plot_actual_vs_expected <- function(ind, ast, ttl, sub, from = as.Date("1987-01-
       unname(lbl)), drop = FALSE) +
     scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
     scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
-    labs(title = ttl, subtitle = sub, y = "A$ million (annualised)", x = NULL,
-         caption = paste(SRC, "Current price, original. Expected series are",
-                         "full-year estimates as reported each quarter."))
+    labs(title = ttl, subtitle = sub, y = y_lab(cur, " (annualised)"), x = NULL,
+         caption = src_cp(cur, paste("Expected series are",
+                                     "full-year estimates as reported each quarter.")))
 }
 
-p5 <- plot_actual_vs_expected(
+make_p5 <- function(cur) plot_actual_vs_expected(
   "Total", BS,
   "Buildings and structures capex: actual and expected",
-  "Buildings and structures, all industries")
-save_csis(p5, "05_actual_vs_expected_bs_total.png")
+  "Buildings and structures, all industries", cur = cur)
+save_both(make_p5, "05_actual_vs_expected_bs_total.png", save_csis)
 
-p6 <- plot_actual_vs_expected(
+make_p6 <- function(cur) plot_actual_vs_expected(
   IMT, EPM,
   "Information Media & Telecommunications equipment capex: actual and expected",
   "Equipment, plant and machinery, Information Media & Telecommunications",
-  from = as.Date("2005-01-01"))
-save_csis(p6, "06_actual_vs_expected_epm_divj.png")
+  from = as.Date("2005-01-01"), cur = cur)
+save_both(make_p6, "06_actual_vs_expected_epm_divj.png", save_csis)
 
 
 # 9. Realisation ratios ---------------------------------------------------
 
 # first LT estimate (~1 year ahead) vs FY outturn
-actual_fy <- cp %>%
+actual_fy_for <- function(cur) cp_for(cur) %>%
   filter(measure == "Actual", !is.na(value)) %>%
   group_by(industry, asset, ref_fy) %>%
   summarise(actual = sum(value), nq = n(), .groups = "drop") %>%
   filter(nq == 4)   # complete years only
 
-first_lt <- cp %>%
-  filter(measure == "Expected LT", !is.na(value)) %>%
-  group_by(industry, asset, ref_fy) %>%
-  slice_min(date, n = 1, with_ties = FALSE) %>%
-  ungroup() %>%
-  select(industry, asset, ref_fy, first_est = value)
+realisation_for <- function(cur) {
+  first_lt <- cp_for(cur) %>%
+    filter(measure == "Expected LT", !is.na(value)) %>%
+    group_by(industry, asset, ref_fy) %>%
+    slice_min(date, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    select(industry, asset, ref_fy, first_est = value)
 
-realisation <- actual_fy %>%
-  inner_join(first_lt, by = c("industry", "asset", "ref_fy")) %>%
-  mutate(ratio = actual / first_est,
-         fy    = fy_label(ref_fy))
+  actual_fy_for(cur) %>%
+    inner_join(first_lt, by = c("industry", "asset", "ref_fy")) %>%
+    mutate(ratio = actual / first_est,
+           fy    = fy_label(ref_fy))
+}
 
-realisation %>%
+realisation_for("AUD") %>%
   filter(industry == IMT, asset == EPM, ref_fy >= 2015) %>%
   select(fy, first_est, actual, ratio) %>%
   print(n = Inf)
 
-rz <- realisation %>% filter(industry == IMT, asset == EPM, ref_fy >= 2012)
+make_p7 <- function(cur) {
+rz <- realisation_for(cur) %>% filter(industry == IMT, asset == EPM, ref_fy >= 2012)
 
-p7 <- ggplot(rz, aes(x = fy)) +
+ggplot(rz, aes(x = fy)) +
   geom_col(aes(y = actual, fill = "Actual outturn"), width = 0.6) +
   geom_point(aes(y = first_est, colour = "First estimate, a year ahead"),
              size = 2.6) +
@@ -350,38 +373,47 @@ p7 <- ggplot(rz, aes(x = fy)) +
   labs(
     title    = "IMT equipment capex: actual outturn vs first estimate",
     subtitle = "Labels show actual as a multiple of the first estimate made a year ahead",
-    y = "A$ million", x = NULL,
-    caption  = paste(SRC, "Current price, original.")
+    y = y_lab(cur), x = NULL,
+    caption  = src_cp(cur)
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-save_csis(p7, "07_realisation_ratio_divj_epm.png")
+}
+save_both(make_p7, "07_realisation_ratio_divj_epm.png", save_csis)
 
 
 # 10. IMT capex by financial year -----------------------------------------
 
-fy_divj <- actual_fy %>%
+make_p8 <- function(cur) {
+fy_divj <- actual_fy_for(cur) %>%
   filter(industry == IMT, ref_fy >= 2010) %>%
   mutate(fy = fy_label(ref_fy))
 
-p8 <- ggplot(fy_divj, aes(fy, actual, fill = asset)) +
+ggplot(fy_divj, aes(fy, actual, fill = asset)) +
   geom_col(width = 0.7) +
   scale_fill_manual(values = c(csis_colours[["navy"]], csis_colours[["red"]])) +
   scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
   labs(
     title    = "Information Media & Telecommunications capital expenditure by financial year",
     subtitle = "Complete financial years only",
-    y = "A$ million", x = NULL,
-    caption  = paste(SRC, "Current price, original.")
+    y = y_lab(cur), x = NULL,
+    caption  = src_cp(cur)
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-save_csis(p8, "08_divj_financial_year.png")
+}
+save_both(make_p8, "08_divj_financial_year.png", save_csis)
 
 
 # 11. Real B&S capex (CVM, SA) --------------------------------------------
 
-# kept separate from the current price charts
-p9 <- dat %>%
+# kept separate from the current price charts. Real (constant-price) values
+# are converted at one rate, the latest complete financial year's average,
+# so growth rates are the same in both currencies.
+real_fy   <- fy_start(Sys.Date())   # latest complete FY, named by the year it ends in
+real_rate <- fx_financial_year(real_fy)
+
+make_p9 <- function(cur) dat %>%
   filter(basis == "CVM_SA") %>%
+  mutate(value = if (cur == "USD") value * real_rate else value) %>%
   ggplot(aes(date, value, colour = industry)) +
   geom_line(linewidth = 0.9) +
   facet_wrap(~industry, scales = "free_y", ncol = 1) +
@@ -392,10 +424,13 @@ p9 <- dat %>%
   labs(
     title    = "Real building and structures capex",
     subtitle = "Chain volume measures, seasonally adjusted, quarterly",
-    y = "A$ million", x = NULL,
-    caption  = paste(SRC, "Chain volume measures, seasonally adjusted.")
+    y = y_lab(cur), x = NULL,
+    caption  = paste(SRC, "Chain volume measures, seasonally adjusted.",
+                     if (cur == "USD") sprintf("
+Converted to US$ at the %s average rate.",
+                                               fy_label(real_fy - 1L)) else "")
   ) +
   theme(legend.position = "none",
         strip.text = element_text(face = "bold", hjust = 0,
                                   colour = csis_colours[["navy"]]))
-save_csis(p9, "09_real_momentum.png", height = 7)
+save_both(make_p9, "09_real_momentum.png", save_csis, height = 7)

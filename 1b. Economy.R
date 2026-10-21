@@ -4,6 +4,7 @@ rm(list = ls())
 if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Economy"))
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
 
 # Australian economy charts
 #   1. Real GDP growth, Australia and Australia vs US
@@ -256,24 +257,29 @@ level_ind <- gva |>
 stopifnot(nrow(level_ind) == 19)
 print(head(level_ind, 3))   # check the title still holds
 
-p_level_ind <- ggplot(level_ind, aes(value, industry)) +
+# Drawn twice, in A$ and US$ (at the quarter's average rate).
+make_level_ind <- function(cur) {
+  d <- level_ind |> mutate(value = if (cur == "USD") value * fx_quarter(latest_q) else value)
+  ggplot(d, aes(value, industry)) +
   geom_col(fill = csis_colours[["navy"]], width = 0.75) +
-  geom_text(aes(label = sprintf("$%sbn (%.1f%%)",
+  geom_text(aes(label = sprintf("%s%sbn (%.1f%%)", cur_sym[[cur]],
                                 format(round(value / 1000), big.mark = ","), share)),
             hjust = -0.12, size = 2.9, family = "source_sans",
             colour = csis_colours[["grey"]]) +
-  scale_x_continuous(labels = label_number(scale = 1e-3, prefix = "$", suffix = "bn"),
+  scale_x_continuous(labels = label_number(scale = 1e-3, prefix = cur_sym[[cur]], suffix = "bn"),
                      expand = expansion(mult = c(0, 0.20))) +
   scale_y_discrete(limits = rev) +   # largest bar at the top
   labs(title = "Australian gross value added by industry",
-       subtitle = paste0("Gross value added by ANZSIC division, current prices, ",
+       subtitle = paste0("Gross value added by ANZSIC division, current prices, ", cur_sym[[cur]], ", ",
                          format(latest_q, "%B %Y"), " quarter. Share of total in brackets."),
        x = NULL, y = NULL,
-       caption = "Source: ABS, Australian National Accounts (cat. no. 5206.0), Table 45.") +
+       caption = paste("Source: ABS, Australian National Accounts (cat. no. 5206.0), Table 45.",
+                       if (cur == "USD") fx_note[["USD"]] else "")) +
   theme_csis() +
   theme_bars
+}
 
-save_plot(p_level_ind, "gva_level_industry.png", width = 8, height = 7)
+save_both(make_level_ind, "gva_level_industry.png", save_plot, width = 8, height = 7)
 
 # Contributions to through-the-year growth: each group's 4-quarter change over
 # the total 4 quarters earlier, so the contributions add up to total growth.
@@ -365,19 +371,27 @@ size_bar <- function(d, label_fmt, x_labels, subtitle) {
     theme_bars
 }
 
-p_agg  <- size_bar(size |> mutate(v = gdp_usd / 1e12), "$%.1ftn",
-                   label_number(prefix = "$", suffix = "tn"), "Aggregate GDP, current US$")
-p_pcap <- size_bar(size |> mutate(v = pcap_ppp / 1e3), "$%.0fk",
-                   label_number(prefix = "$", suffix = "k"), "GDP per capita, PPP")
+# Drawn twice. The source is in US$; the A$ version converts aggregate GDP at
+# the year's average rate. GDP per capita at PPP is in international dollars,
+# which have no market exchange rate, so that panel is the same in both.
+make_size <- function(cur) {
+  conv  <- if (cur == "AUD") 1 / fx_calendar_year(size_yr) else 1
+  sym   <- cur_sym[[cur]]
+  p_agg  <- size_bar(size |> mutate(v = gdp_usd * conv / 1e12), paste0(sym, "%.1ftn"),
+                     label_number(prefix = sym, suffix = "tn"), paste0("Aggregate GDP, current ", sym))
+  p_pcap <- size_bar(size |> mutate(v = pcap_ppp / 1e3), "$%.0fk",
+                     label_number(prefix = "$", suffix = "k"), "GDP per capita, PPP (international dollars)")
 
-p_size <- (p_agg | p_pcap) +
-  plot_annotation(
-    title   = "Aggregate GDP and GDP per capita, Australia and the United States",
-    caption = paste0("Source: World Bank World Development Indicators, ", size_yr, "."),
-    theme   = theme_csis()
-  )
+  (p_agg | p_pcap) +
+    plot_annotation(
+      title   = "Aggregate GDP and GDP per capita, Australia and the United States",
+      caption = paste0("Source: World Bank World Development Indicators, ", size_yr, ".",
+                       if (cur == "AUD") fx_note_aud_from_usd else ""),
+      theme   = theme_csis()
+    )
+}
 
-save_plot(p_size, "au_us_size.png", width = 10, height = 3.8)
+save_both(make_size, "au_us_size.png", save_plot, width = 10, height = 3.8)
 
 # Australia against US states. FRED state GDP series are <state code>NGSP,
 # annual, millions of current dollars.
@@ -417,22 +431,28 @@ states_plot <- comb |>
   arrange(value) |>
   mutate(name = factor(name, levels = name))
 
-p_states <- ggplot(states_plot, aes(value, name, fill = is_au)) +
+# Drawn twice; the source is in US$, the A$ version uses the year's average rate.
+make_states <- function(cur) {
+  conv <- if (cur == "AUD") 1 / fx_calendar_year(states_yr) else 1
+  sym  <- cur_sym[[cur]]
+  ggplot(states_plot |> mutate(value = value * conv), aes(value, name, fill = is_au)) +
   geom_col(width = 0.72) +
-  geom_text(aes(label = sprintf("$%.2ftn", value)), hjust = -0.15,
+  geom_text(aes(label = sprintf("%s%.2ftn", sym, value)), hjust = -0.15,
             size = 2.9, family = "source_sans", colour = csis_colours[["grey"]]) +
   scale_fill_manual(values = c(`TRUE`  = csis_colours[["red"]],
                                `FALSE` = csis_colours[["ltgrey"]]), guide = "none") +
-  scale_x_continuous(labels = label_number(prefix = "$", suffix = "tn", accuracy = 0.5),
+  scale_x_continuous(labels = label_number(prefix = sym, suffix = "tn", accuracy = 0.5),
                      expand = expansion(mult = c(0, 0.18))) +
   labs(title = "GDP of Australia and US states",
-       subtitle = paste0("GDP, current US$, ", states_yr, ". Australia shown in red."),
+       subtitle = paste0("GDP, current ", sym, ", ", states_yr, ". Australia shown in red."),
        x = NULL, y = NULL,
-       caption = "Sources: US BEA; World Bank World Development Indicators.") +
+       caption = paste("Sources: US BEA; World Bank World Development Indicators.",
+                       if (cur == "AUD") fx_note_aud_from_usd else "")) +
   theme_csis() +
   theme_bars
+}
 
-save_plot(p_states, "au_vs_us_states.png", width = 8, height = 6)
+save_both(make_states, "au_vs_us_states.png", save_plot, width = 8, height = 6)
 
 # Australia's GDP rank among the 38 OECD members (World Bank, current US$)
 oecd_members <- c(
@@ -489,23 +509,31 @@ oecd_plot <- ranked |>
   mutate(country_label = factor(paste0(rank, ". ", country),
                                 levels = paste0(rank, ". ", country)))
 
-p_oecd_rank <- ggplot(oecd_plot, aes(gdp_usd / 1e12, country_label, fill = is_au)) +
+# Drawn twice; the source is in US$, the A$ version uses the year's average
+# rate (one rate for every country, so the ranking is unchanged).
+make_oecd_rank <- function(cur) {
+  conv <- if (cur == "AUD") 1 / fx_calendar_year(oecd_yr) else 1
+  sym  <- cur_sym[[cur]]
+  d <- oecd_plot |> mutate(v = gdp_usd * conv / 1e12)
+  ggplot(d, aes(v, country_label, fill = is_au)) +
   geom_col(width = 0.72) +
-  geom_text(data = filter(oecd_plot, is_au),
-            aes(label = paste0("$", number(gdp_usd / 1e12, accuracy = 0.01), "tn")),
+  geom_text(data = filter(d, is_au),
+            aes(label = paste0(sym, number(v, accuracy = 0.01), "tn")),
             hjust = -0.15, size = 3.1, family = "source_sans",
             colour = csis_colours[["grey"]]) +
   scale_fill_manual(values = c(`TRUE`  = csis_colours[["red"]],
                                `FALSE` = csis_colours[["ltgrey"]]), guide = "none") +
-  scale_x_continuous(labels = label_dollar(suffix = "tn", accuracy = 1),
+  scale_x_continuous(labels = label_dollar(prefix = sym, suffix = "tn", accuracy = 1),
                      expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Largest OECD economies by nominal GDP",
-       subtitle = paste0("Nominal GDP, current US$, ", oecd_yr,
+       subtitle = paste0("Nominal GDP, current ", sym, ", ", oecd_yr,
                          ". Ranking is among all 38 OECD members."),
        x = NULL, y = NULL,
        caption = paste("Source: World Bank World Development Indicators (GDP, current US$);",
-                       "OECD membership list.")) +
+                       "OECD membership list.",
+                       if (cur == "AUD") fx_note_aud_from_usd else "")) +
   theme_csis() +
   theme_bars
+}
 
-save_plot(p_oecd_rank, "oecd_gdp_rank_australia.png", width = 8, height = 6.2)
+save_both(make_oecd_rank, "oecd_gdp_rank_australia.png", save_plot, width = 8, height = 6.2)

@@ -853,3 +853,85 @@ ggsave("US-Australia distance map.png", p,
 
 
 
+
+
+# ============================================================
+# AUSTRALIA AND THE CONTIGUOUS US: SIZE, COASTLINE, POPULATION
+# ============================================================
+# Facts shown under the overlay map on the Overview page, written to
+# Overview/country_facts.csv (the .qmd reads that file).
+#
+# Land area
+#   Australia: CIA World Factbook, land area 7,682,300 sq km (includes
+#     Lord Howe and Macquarie islands). The Factbook was retired on
+#     4 February 2026; figures are from its final online edition.
+#   Contiguous US (48 states + DC): US Census Bureau, State Area
+#     Measurements (2010), United States land area less Alaska and Hawaii:
+#     9,147,593 - 1,477,953 - 16,635 = 7,653,005 sq km.
+# Coastline: CIA World Factbook, final edition (Australia 25,760 km;
+#   United States 19,924 km, all states, as the Factbook gives no figure
+#   for the contiguous US alone).
+# Population (refreshed each run):
+#   Australia: ABS, National, state and territory population, estimated
+#     resident population, latest quarter (ABS Data API, dataflow ERP_Q).
+#   United States: US Census Bureau, Vintage population estimates
+#     (NST-EST<year>-ALLDATA), latest 1 July estimate for the whole country.
+# ------------------------------------------------------------
+
+KM2_PER_SQMI <- 2.589988110336
+KM_PER_MILE  <- 1.609344
+
+facts_file <- "country_facts.csv"
+old_facts  <- if (file.exists(facts_file)) utils::read.csv(facts_file) else NULL
+
+# Australia: ABS estimated resident population, latest quarter
+au_pop <- tryCatch({
+  # ABS Data API, dataflow ERP_Q: measure 1 (ERP), persons, all ages, Australia, quarterly
+  x <- utils::read.csv(url(paste0("https://data.api.abs.gov.au/rest/data/ABS,ERP_Q,1.0.0/",
+                                  "1.3.TOT.AUS.Q?lastNObservations=1&format=csv")))
+  q <- x$TIME_PERIOD[1]                                   # e.g. "2026-Q1"
+  qend <- c(Q1 = "March", Q2 = "June", Q3 = "September", Q4 = "December")[[sub(".*-", "", q)]]
+  list(value = x$OBS_VALUE[1], as_at = paste(qend, sub("-.*", "", q)))
+}, error = function(e) {
+  message("ABS population not available (", conditionMessage(e), "); keeping the last value.")
+  NULL
+})
+
+# United States: newest Census vintage that exists
+us_pop <- tryCatch({
+  got <- NULL
+  for (v in as.integer(format(Sys.Date(), "%Y")):(as.integer(format(Sys.Date(), "%Y")) - 3)) {
+    url <- sprintf("https://www2.census.gov/programs-surveys/popest/datasets/2020-%d/state/totals/NST-EST%d-ALLDATA.csv", v, v)
+    d <- tryCatch(utils::read.csv(url), error = function(e) NULL)
+    if (!is.null(d)) { got <- list(d = d, v = v); break }
+  }
+  if (is.null(got)) stop("no Census vintage found")
+  us <- got$d[got$d$NAME == "United States", ]
+  list(value = us[[paste0("POPESTIMATE", got$v)]], as_at = paste("July", got$v))
+}, error = function(e) {
+  message("Census population not available (", conditionMessage(e), "); keeping the last value.")
+  NULL
+})
+
+keep_old <- function(country, field) {
+  if (is.null(old_facts)) return(NA)
+  old_facts[old_facts$country == country, field]
+}
+
+facts <- data.frame(
+  country        = c("Australia", "United States"),
+  land_note      = c("Includes Lord Howe and Macquarie islands", "Contiguous 48 states and DC, as in the map"),
+  land_km2       = c(7682300, 9147593 - 1477953 - 16635),
+  coastline_km   = c(25760, 19924),
+  coastline_note = c("", "All US states; the Factbook gives no contiguous-only figure"),
+  population     = c(if (!is.null(au_pop)) au_pop$value else keep_old("Australia", "population"),
+                     if (!is.null(us_pop)) us_pop$value else keep_old("United States", "population")),
+  population_as_at = c(if (!is.null(au_pop)) au_pop$as_at else keep_old("Australia", "population_as_at"),
+                       if (!is.null(us_pop)) us_pop$as_at else keep_old("United States", "population_as_at")),
+  population_note = c("Estimated resident population (ABS)", "Whole country, 50 states and DC (US Census Bureau)")
+)
+facts$land_sqmi       <- round(facts$land_km2 / KM2_PER_SQMI)
+facts$coastline_miles <- round(facts$coastline_km / KM_PER_MILE)
+
+utils::write.csv(facts, facts_file, row.names = FALSE)
+print(facts)
