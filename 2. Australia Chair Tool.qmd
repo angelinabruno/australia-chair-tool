@@ -594,8 +594,12 @@ filter_family <- filter_select("family", "End-use family", sd, ~Family, multiple
 filter_status <- filter_select("status", "Lifecycle stage", sd, ~Status, multiple = TRUE)
 
 map <- leaflet(sd) |>                       # no fixed height -> fills the card
-  addProviderTiles(providers$CartoDB.Positron,   group = "Light") |>
-  addProviderTiles(providers$CartoDB.DarkMatter, group = "Dark") |>
+  # Esri basemaps: CARTO's (used before) now need an API key and show a
+  # watermark without one
+  addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Light") |>
+  addTiles("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+           attribution = "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, OpenStreetMap contributors",
+           options = tileOptions(maxZoom = 16), group = "Dark") |>
   addProviderTiles(providers$Esri.WorldImagery,  group = "Satellite") |>
   setView(134, -26, 4) |>
   addCircleMarkers(lng = ~Longitude, lat = ~Latitude,
