@@ -267,37 +267,6 @@ p_gdp_both <- (p_gdp + labs(title = "Real GDP growth", caption = NULL)) /
                   theme = theme_csis())
 save_plot(p_gdp_both, "gdp_au_us.png", width = 8, height = 8)
 
-# Booms and busts: how much through-the-year growth swings in each decade.
-# The standard deviation is the typical distance of a quarter's growth rate
-# from that decade's average, so a taller bar means bigger booms and busts.
-vol <- gdp |>
-  mutate(decade = floor(year(date) / 10) * 10) |>
-  filter(decade >= 1960) |>
-  group_by(country, decade) |>
-  summarise(sd = sd(yoy), quarters = n(), .groups = "drop") |>
-  mutate(decade_lab = ifelse(decade == max(decade),
-                             paste0(decade, "s\n(to ", format(max(gdp$date), "%Y"), ")"),
-                             paste0(decade, "s")))
-write.csv(vol, "gdp_volatility_au_us.csv", row.names = FALSE)
-
-p_vol <- ggplot(vol, aes(decade_lab, sd, fill = country)) +
-  geom_col(position = position_dodge(width = 0.75), width = 0.7) +
-  geom_text(aes(label = sprintf("%.1f", sd)), position = position_dodge(width = 0.75),
-            vjust = -0.4, size = 3, family = "source_sans", colour = csis_colours[["grey"]]) +
-  scale_fill_manual(values = au_us_colours) +
-  scale_y_continuous(labels = label_number(accuracy = 1, suffix = " pts"),
-                     expand = expansion(c(0, 0.1))) +
-  labs(title = "How much real GDP growth swings, Australia and the United States",
-       subtitle = paste0("Standard deviation of through-the-year real GDP growth in each decade, ",
-                         "percentage points.
-Taller bars mean bigger booms and busts."),
-       x = NULL, y = NULL,
-       caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0);",
-                       "US BEA, National Income and Product Accounts, Table 1.1.6.")) +
-  theme_csis() +
-  theme(panel.grid.major.x = element_blank())
-save_plot(p_vol, "gdp_volatility_au_us.png", width = 8, height = 4.8)
-
 # Australia: ABS A3606058X (output per hour worked)
 # US: BLS PRS84006093, business sector labor productivity (output per hour
 # of all workers), index
