@@ -13,10 +13,10 @@ source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$
 #   5. Relative size: Australia vs US, US states and the OECD
 #   (Two-way investment charts are made by '1i. Investment.R'.)
 #
-# Everything is downloaded (ABS via readabs, FRED, World Bank).
+# Everything is downloaded (ABS via readabs; US data straight from BEA and
+# BLS, no API keys needed; World Bank).
 
 library(readabs)
-library(quantmod)   # load before dplyr so dplyr's first()/last() aren't masked
 library(lubridate)
 library(WDI)
 library(patchwork)
@@ -92,14 +92,63 @@ save_plot <- function(plot, file, width = 8, height = 4.5) {
   ggsave(file, plot, width = width, height = height, dpi = DPI, bg = "white")
 }
 
-# FRED series as a data frame (date, value)
-fred <- function(id) {
-  x <- getSymbols(id, src = "FRED", auto.assign = FALSE)
-  data.frame(date = index(x), value = as.numeric(x[, 1]))
+# ---- US data: BEA and BLS --------------------------------------------------
+# Downloads are kept in Economy/raw/ and fetched again when over a week old.
+RAW_DIR <- "raw"
+dir.create(RAW_DIR, showWarnings = FALSE)
+
+fetch_us <- function(url, dest, max_age_days = 7) {
+  if (!file.exists(dest) ||
+      difftime(Sys.time(), file.mtime(dest), units = "days") > max_age_days) {
+    message("Downloading ", basename(dest))
+    utils::download.file(url, dest, mode = "wb", quiet = TRUE,
+                         headers = c(`User-Agent` = "Mozilla/5.0"))
+  }
+  dest
+}
+
+# BEA NIPA quarterly flat file: one row per series code and quarter.
+# A191RX = real GDP, millions of chained (2017) dollars, seasonally adjusted
+# at annual rates (NIPA Table 1.1.6, line 1). Returns date (quarter start), value.
+bea_nipa_q <- function(code) {
+  f <- fetch_us("https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt",
+                file.path(RAW_DIR, "bea_NipaDataQ.txt"))
+  d <- utils::read.csv(f, colClasses = "character", check.names = FALSE)
+  names(d) <- c("code", "period", "value")
+  d <- d[d$code == code, ]
+  stopifnot("BEA series not found in NipaDataQ.txt" = nrow(d) > 0)
+  data.frame(date  = as.Date(paste0(substr(d$period, 1, 4), "-",
+                                    (as.integer(substr(d$period, 6, 6)) - 1) * 3 + 1, "-01")),
+             value = as.numeric(gsub(",", "", d$value)))
+}
+
+# BLS public API, version 1 (no key: up to 10 years per request, 25 requests a
+# day). Quarterly series; returns date (quarter start), value.
+bls_q <- function(series, from_year = 1995) {
+  to_year <- as.integer(format(Sys.Date(), "%Y"))
+  starts  <- seq(from_year, to_year, by = 10)
+  out <- lapply(starts, function(y0) {
+    body <- sprintf('{"seriesid":["%s"],"startyear":"%d","endyear":"%d"}',
+                    series, y0, min(y0 + 9, to_year))
+    res <- httr2::request("https://api.bls.gov/publicAPI/v1/timeseries/data/") |>
+      httr2::req_body_raw(body, type = "application/json") |>
+      httr2::req_perform() |>
+      httr2::resp_body_json(check_type = FALSE)   # BLS labels its JSON as text/plain
+    if (res$status != "REQUEST_SUCCEEDED") stop("BLS: ", paste(unlist(res$message), collapse = " "))
+    obs <- res$Results$series[[1]]$data
+    data.frame(year   = vapply(obs, `[[`, "", "year"),
+               period = vapply(obs, `[[`, "", "period"),
+               value  = as.numeric(vapply(obs, `[[`, "", "value")))
+  })
+  d <- do.call(rbind, out)
+  d <- d[grepl("^Q0[1-4]$", d$period), ]
+  d$date <- as.Date(paste0(d$year, "-", (as.integer(substr(d$period, 3, 3)) - 1) * 3 + 1, "-01"))
+  d <- d[order(d$date), c("date", "value")]
+  d[!duplicated(d$date), ]
 }
 
 # Index each country's series to the average of base_year = 100. ABS dates
-# quarters by their last month and FRED by their first, so both are floored
+# quarters by their last month and BEA/BLS by their first, so both are floored
 # to the quarter start.
 index_to <- function(df, base_year) {
   df |>
@@ -120,7 +169,7 @@ gdp_au <- read_abs_series("A2304402X") |>
   arrange(date) |>
   mutate(country = "Australia")
 
-gdp_us <- fred("GDPC1") |> mutate(country = "United States")
+gdp_us <- bea_nipa_q("A191RX") |> mutate(country = "United States")
 
 p_gdp_au <- gdp_au |>
   mutate(qoq = 100 * (value / lag(value) - 1),
@@ -191,18 +240,19 @@ p_gdp_idx <- gdp_idx |>
                          "seasonally adjusted."),
        x = NULL, y = NULL,
        caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0);",
-                       "US BEA via FRED (GDPC1).")) +
+                       "US BEA, National Income and Product Accounts, Table 1.1.6.")) +
   theme_csis()
 
 save_plot(p_gdp_idx, "gdp_index_au_us.png")
 
 # Australia: ABS A3606058X (output per hour worked)
-# US: FRED OPHPBS, business sector real output per hour of all persons
+# US: BLS PRS84006093, business sector labor productivity (output per hour
+# of all workers), index
 prod_base_year <- 2015
 
 prod <- bind_rows(
   read_abs_series("A3606058X") |> select(date, value) |> mutate(country = "Australia"),
-  fred("OPHPBS") |> mutate(country = "United States")
+  bls_q("PRS84006093") |> mutate(country = "United States")
 ) |>
   index_to(prod_base_year)
 
@@ -222,7 +272,7 @@ p_prod <- prod |>
                          "Australia: market sector. United States: business sector."),
        x = NULL, y = NULL,
        caption = paste("Sources: ABS, Australian System of National Accounts;",
-                       "US Bureau of Labor Statistics.")) +
+                       "US Bureau of Labor Statistics, Productivity and Costs.")) +
   theme_csis()
 
 save_plot(p_prod, "productivity_au_us.png")
@@ -393,17 +443,21 @@ make_size <- function(cur) {
 
 save_both(make_size, "au_us_size.png", save_plot, width = 10, height = 3.8)
 
-# Australia against US states. FRED state GDP series are <state code>NGSP,
-# annual, millions of current dollars.
-get_state_gdp <- function(name) {
-  id <- paste0(state.abb[match(name, state.name)], "NGSP")
-  x  <- try(getSymbols(id, src = "FRED", auto.assign = FALSE), silent = TRUE)
-  if (inherits(x, "try-error")) return(NULL)
-  data.frame(state = name, year = as.integer(format(index(x), "%Y")),
-             gdp = as.numeric(x[, 1]))
-}
+# Australia against US states. BEA regional accounts, SAGDP2 (GDP by state,
+# millions of current dollars, annual), line 1 = all industry total.
+sagdp_zip <- fetch_us("https://apps.bea.gov/regional/zip/SAGDP.zip",
+                      file.path(RAW_DIR, "bea_SAGDP.zip"))
+sagdp_csv <- grep("^SAGDP2__ALL_AREAS_.*\\.csv$", utils::unzip(sagdp_zip, list = TRUE)$Name, value = TRUE)
+stopifnot("SAGDP2 all-areas file not found in SAGDP.zip" = length(sagdp_csv) == 1)
+sagdp <- utils::read.csv(unz(sagdp_zip, sagdp_csv), colClasses = "character", check.names = FALSE)
 
-state_gdp <- bind_rows(lapply(state.name, get_state_gdp))
+state_gdp <- sagdp |>
+  filter(trimws(LineCode) == "1", GeoName %in% state.name) |>
+  select(GeoName, matches("^[0-9]{4}$")) |>
+  pivot_longer(-GeoName, names_to = "year", values_to = "gdp") |>
+  transmute(state = GeoName, year = as.integer(year),
+            gdp = suppressWarnings(as.numeric(gdp))) |>
+  filter(!is.na(gdp))
 stopifnot(nrow(state_gdp) > 0)
 message("States retrieved: ", n_distinct(state_gdp$state), " of 50")
 
@@ -446,7 +500,7 @@ make_states <- function(cur) {
   labs(title = "GDP of Australia and US states",
        subtitle = paste0("GDP, current ", sym, ", ", states_yr, ". Australia shown in red."),
        x = NULL, y = NULL,
-       caption = paste("Sources: US BEA; World Bank World Development Indicators.",
+       caption = paste("Sources: US BEA, GDP by state (SAGDP2); World Bank World Development Indicators.",
                        if (cur == "AUD") fx_note_aud_from_usd else "")) +
   theme_csis() +
   theme_bars
