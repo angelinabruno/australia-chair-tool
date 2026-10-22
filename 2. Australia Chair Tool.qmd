@@ -112,7 +112,7 @@ tiles <- c(
   tile("data-centres", "Data centres", "The investment surge in information media and telecommunications capital spending.", "Data centres/02_divj_share.png"),
   tile("research-and-ai", "Technology", "Research strengths in critical technologies and collaboration with the US and China.", "Tech/D_collaboration_partners.png"),
   tile("intellectual-property", "Intellectual property", "US patents and trade marks in Australia and joint US-Australian filings.", "Patents/us_au_coapplied_trend.png"),
-  tile("human-capital", "Human capital", "Two-way skilled and student flows: E-3 visas and jobs, and US professionals and students in Australia.", "Migration/e3_visas_australians.png")
+  tile("human-capital", "Human capital", "Two-way skilled and student flows: visas and jobs for Australian skilled professionals in the US, and Americans working and studying in Australia.", "Migration/e3_visas_australians.png")
 )
 
 arcs <- paste0(
@@ -204,13 +204,9 @@ cat(paste0(
 
 ## Column {.tabset width="50%" title="Growth and structure"}
 
-### GDP growth
+### GDP
 
-![](<Economy/gdp_growth_au_us.png>){title="GDP growth, AU vs US"}
-
-### GDP index
-
-![](<Economy/gdp_index_au_us.png>){title="Real GDP index, AU vs US"}
+![](<Economy/gdp_au_us.png>){title="Real GDP, Australia and the United States"}
 
 ### Productivity
 
@@ -595,7 +591,7 @@ mines <- mines |>
 
 sd <- SharedData$new(mines)
 filter_family <- filter_select("family", "End-use family", sd, ~Family, multiple = TRUE)
-filter_status <- filter_select("status", "Pipeline status", sd, ~Status, multiple = TRUE)
+filter_status <- filter_select("status", "Lifecycle stage", sd, ~Status, multiple = TRUE)
 
 map <- leaflet(sd) |>                       # no fixed height -> fills the card
   addProviderTiles(providers$CartoDB.Positron,   group = "Light") |>
@@ -610,7 +606,7 @@ map <- leaflet(sd) |>                       # no fixed height -> fills the card
   addLayersControl(baseGroups = c("Light", "Dark", "Satellite"),
     options = layersControlOptions(collapsed = FALSE)) |>
   addLegend("bottomright", pal = pal, values = status_levels,
-    title = "Pipeline status", opacity = 0.9)
+    title = "Lifecycle stage", opacity = 0.9)
 ```
 
 ## {.sidebar width=280}
@@ -748,40 +744,40 @@ map
 
 ## Column {.tabset width="50%" title="Australians in the United States"}
 
-### E-3 visas
+### Skilled professional visas
 
-![](Migration/e3_visas_australians.png){title="E-3 visas issued to Australians"}
+![](Migration/e3_visas_australians.png){title="Skilled professional visas issued to Australians"}
 
-### E-3 jobs by occupation
+### Skilled jobs by occupation
 
-![](Migration/e3_jobs_by_occupation.png){title="E-3 jobs certified for Australians, by occupation group"}
+![](Migration/e3_jobs_by_occupation.png){title="Skilled professional jobs certified for Australians, by occupation"}
 
-### E-3 jobs over time
+### Skilled jobs over time
 
-![](Migration/e3_jobs_trend.png){title="E-3 jobs certified for Australians by occupation group, over time"}
+![](Migration/e3_jobs_trend.png){title="Skilled professional jobs certified for Australians, over time"}
 
-### E-3 employers and cities
+### Skilled jobs by employer and city
 
-![](Migration/e3_employers_cities.png){title="E-3 jobs certified for Australians: top employers and worksite cities"}
+![](Migration/e3_employers_cities.png){title="Skilled professional jobs certified for Australians, by employer and city"}
 
 ### Students and exchange
 
-![](Migration/student_exchange_visas_australians.png){title="Student and exchange visitor visas issued to Australians"}
+![](Migration/student_exchange_visas_australians.png){title="Student and exchange visas issued to Australians"}
 
 ## Column {.tabset width="50%" title="Americans in Australia"}
 
-### US skilled workers in Australia
+### Skilled visas by occupation
 
-![](Migration/us_citizens_skilled_visas_occupation.png){title="US citizens on Australian temporary skilled visas, by occupation"}
+![](Migration/us_citizens_skilled_visas_occupation.png){title="Skilled visas held by Americans in Australia, by occupation"}
 
-### US citizens on temporary visas
+### Temporary visas by type
 
-![](Migration/us_citizens_temporary_visas.png){title="US citizens on temporary work, study and graduate visas in Australia"}
+![](Migration/us_citizens_temporary_visas.png){title="Temporary visas held by Americans in Australia, by type"}
 
-### Net migration (by birthplace)
+### Net migration
 
-![](Migration/nom_usa_national.png){title="Net overseas migration of USA-born people"}
+![](Migration/nom_usa_national.png){title="Net migration of Americans to Australia"}
 
 ### Net migration by state
 
-![](Migration/nom_usa_states.png){title="Net overseas migration of USA-born people, by state"}
+![](Migration/nom_usa_states.png){title="Net migration of Americans to Australia, by state and territory"}

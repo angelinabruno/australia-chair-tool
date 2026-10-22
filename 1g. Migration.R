@@ -190,8 +190,8 @@ p_national <- nom_usa |>
   scale_x_continuous(breaks = seq(2005, 2035, 5)) +
   scale_y_continuous(labels = scales::comma) +
   labs(
-    title    = "Net overseas migration of USA-born people, Australia",
-    subtitle = "Persons, years ending 30 June",
+    title    = "Net migration of Americans to Australia",
+    subtitle = "Net overseas migration of people born in the USA, years ending 30 June",
     x = NULL, y = NULL, caption = abs_caption
   ) +
   theme_minimal(base_size = 12) +
@@ -208,8 +208,8 @@ p_states <- nom_usa |>
   scale_x_continuous(breaks = seq(2005, 2035, 10)) +
   scale_y_continuous(labels = scales::comma) +
   labs(
-    title    = "Net overseas migration of USA-born people, by state and territory",
-    subtitle = "Persons, years ending 30 June",
+    title    = "Net migration of Americans to Australia, by state and territory",
+    subtitle = "Net overseas migration of people born in the USA, years ending 30 June",
     x = NULL, y = NULL, caption = abs_caption
   ) +
   theme_minimal(base_size = 11) +
@@ -387,14 +387,14 @@ NIV_CAPTION <- paste0("Source: US Department of State, Report of the Visa Office
 E3_CAP <- 10500
 e3 <- niv |>
   filter(class %in% c("E3", "E3R", "E3D")) |>
-  mutate(type = recode(class, E3 = "New E-3 (principal applicants, counted against the cap)",
-                              E3R = "E-3 renewals", E3D = "Spouses and children (E-3D)"),
-         type = factor(type, levels = c("New E-3 (principal applicants, counted against the cap)",
-                                        "E-3 renewals", "Spouses and children (E-3D)")))
+  mutate(type = recode(class, E3 = "New visas (principal applicants, counted against the cap)",
+                              E3R = "Renewals", E3D = "Spouses and children"),
+         type = factor(type, levels = c("New visas (principal applicants, counted against the cap)",
+                                        "Renewals", "Spouses and children")))
 
 p_e3 <- ggplot(e3, aes(fy, visas, colour = type)) +
   geom_hline(yintercept = E3_CAP, linetype = "22", colour = csis_colours[["grey"]], linewidth = 0.6) +
-  annotate("text", x = min(e3$fy), y = E3_CAP, label = "Annual cap: 10,500 new E-3 visas",
+  annotate("text", x = min(e3$fy), y = E3_CAP, label = "Annual cap: 10,500 new visas",
            hjust = 0, vjust = -0.6, size = 3.4, family = "source_sans", colour = csis_colours[["grey"]]) +
   geom_line(linewidth = 1) +
   geom_point(size = 1.6) +
@@ -402,11 +402,11 @@ p_e3 <- ggplot(e3, aes(fy, visas, colour = type)) +
   scale_y_continuous(labels = comma, limits = c(0, NA), expand = expansion(c(0, 0.08))) +
   scale_x_continuous(breaks = seq(2006, niv_last, 2)) +
   guides(colour = guide_legend(ncol = 1)) +
-  labs(title = "E-3 visas issued to Australians",
-       subtitle = sprintf("Visas issued by US fiscal year, FY%d to FY%d. The E-3 is a work visa for Australian professionals only.",
+  labs(title = "Skilled professional visas issued to Australians",
+       subtitle = sprintf("Visas issued by US fiscal year, FY%d to FY%d. A US work visa reserved for Australian professionals.",
                           min(e3$fy), niv_last),
        x = NULL, y = NULL,
-       caption = paste0(NIV_CAPTION, " Under the E-3 rules, renewals and dependants do not count against the cap.")) +
+       caption = paste0(NIV_CAPTION, " Visa class E-3; renewals and dependants do not count against the cap.")) +
   theme_csis()
 
 save_csis(p_e3, "e3_visas_australians.png")
@@ -424,7 +424,7 @@ p_fj <- ggplot(fj, aes(fy, visas, colour = type)) +
   scale_y_continuous(labels = comma, limits = c(0, NA), expand = expansion(c(0, 0.08))) +
   scale_x_continuous(breaks = seq(2006, niv_last, 2)) +
   guides(colour = guide_legend(ncol = 1)) +
-  labs(title = "Student and exchange visitor visas issued to Australians",
+  labs(title = "Student and exchange visas issued to Australians",
        subtitle = sprintf("Visas issued by US fiscal year, FY%d to FY%d", min(fj$fy), niv_last),
        x = NULL, y = NULL, caption = NIV_CAPTION) +
   theme_csis()
@@ -501,8 +501,8 @@ p_sk <- ggplot(sk_occ, aes(holders, occupation)) +
   geom_text(aes(label = comma(holders)), hjust = -0.2, size = 3.3, family = "source_sans",
             colour = csis_colours[["grey"]]) +
   scale_x_continuous(labels = comma, expand = expansion(c(0, 0.12))) +
-  labs(title = "US citizens on Australian temporary skilled visas, by occupation",
-       subtitle = sprintf("Primary visa holders in Australia at %s, top 15 nominated occupations (of %s in total)",
+  labs(title = "Skilled visas held by Americans in Australia, by occupation",
+       subtitle = sprintf("US citizens holding temporary skilled visas (primary applicants) at %s, top 15 nominated occupations (of %s in total)",
                           trimws(format(sk_last, "%e %B %Y")), comma(sk_total)),
        x = NULL, y = NULL,
        caption = paste0(HA_CAPTION, ", Temporary Resident (Skilled) visa holders (BP0014). ",
@@ -528,18 +528,29 @@ temp <- us_extract(fetch_home_affairs("temporary-entrants-visa-holders", "bp0019
          group = factor(TEMP_GROUPS[`Visa Category`], levels = rev(unname(TEMP_GROUPS)))) |>
   count(snapshot, group, wt = `Visa Holders`, name = "holders")
 
-p_temp <- ggplot(temp, aes(snapshot, holders, fill = group)) +
+# Smoothed with a four-quarter moving average of the quarter-end snapshots,
+# which takes out the seasonal swing in student and working holiday numbers.
+temp_ma <- temp |>
+  filter(snapshot == lubridate::ceiling_date(snapshot, "quarter") - 1) |>
+  arrange(group, snapshot) |>
+  group_by(group) |>
+  mutate(holders = as.numeric(stats::filter(holders, rep(1 / 4, 4), sides = 1))) |>
+  ungroup() |>
+  filter(!is.na(holders))
+
+p_temp <- ggplot(temp_ma, aes(snapshot, holders, fill = group)) +
   geom_area(colour = "white", linewidth = 0.2) +
   scale_fill_manual(values = setNames(c(csis_colours[["navy"]], "#3E5C8A", csis_colours[["teal"]],
                                         csis_colours[["gold"]], csis_colours[["ltgrey"]]),
                                       unname(TEMP_GROUPS))) +
   scale_y_continuous(labels = comma, expand = expansion(c(0, 0.05))) +
-  scale_x_date(breaks = seq(as.Date("2012-01-01"), max(temp$snapshot), by = "2 years"),
+  scale_x_date(breaks = seq(as.Date("2012-01-01"), max(temp_ma$snapshot), by = "2 years"),
                date_labels = "%Y", expand = expansion(mult = c(0.01, 0.02))) +
   guides(fill = guide_legend(ncol = 2, reverse = TRUE)) +
-  labs(title = "US citizens on temporary work, study and graduate visas in Australia",
-       subtitle = sprintf("Visa holders in Australia, primary and secondary applicants, %s to %s",
-                          format(min(temp$snapshot), "%B %Y"), format(max(temp$snapshot), "%B %Y")),
+  labs(title = "Temporary visas held by Americans in Australia, by type",
+       subtitle = sprintf(paste0("US citizens holding work, study and graduate visas, primary and secondary applicants.\n",
+                                 "Four-quarter moving average, %s to %s"),
+                          format(min(temp_ma$snapshot), "%B %Y"), format(max(temp_ma$snapshot), "%B %Y")),
        x = NULL, y = NULL,
        caption = paste0(HA_CAPTION, ", temporary visa holders in Australia (BP0019). ",
                         "Excludes visitor, bridging, transit and other temporary visas.")) +
@@ -623,13 +634,13 @@ p_lca_occ <- ggplot(lca_occ, aes(lcas, group)) +
   geom_text(aes(label = sprintf("%s (%s)", comma(lcas), percent(share, accuracy = 1))),
             hjust = -0.1, size = 3.3, family = "source_sans", colour = csis_colours[["grey"]]) +
   scale_x_continuous(labels = comma, expand = expansion(c(0, 0.2))) +
-  labs(title = "E-3 jobs certified for Australians, by occupation group",
-       subtitle = sprintf("Certified E-3 Labor Condition Applications, US fiscal year %d (%s in total)",
+  labs(title = "Skilled professional jobs certified for Australians, by occupation",
+       subtitle = sprintf("Certified Labor Condition Applications, US fiscal year %d (%s in total)",
                           lca_fy, comma(nrow(e3_lca))),
        x = NULL, y = NULL,
        caption = paste0("Source: US Department of Labor, Office of Foreign Labor Certification, LCA disclosure data. ",
-                        "Occupation groups are 2018 SOC major groups.\n",
-                        "Employers file an LCA for each new E-3 job, transfer and extension, so LCAs ",
+                        "Occupation groups are 2018 SOC major groups. Visa class E-3.\n",
+                        "Employers file an LCA for each new job, transfer and extension, so LCAs ",
                         "exceed visas issued and are not a count of people.")) +
   theme_csis() +
   theme(panel.grid.major.y = element_blank(),
@@ -660,13 +671,13 @@ p_lca_trend <- ggplot(lca_trend, aes(fy, lcas, fill = group)) +
   scale_y_continuous(labels = comma, expand = expansion(c(0, 0.05))) +
   scale_x_continuous(breaks = seq(min(lca_trend$fy), max(lca_trend$fy), 2)) +
   guides(fill = guide_legend(ncol = 2)) +
-  labs(title = "E-3 jobs certified for Australians, by occupation group",
-       subtitle = sprintf("Certified E-3 Labor Condition Applications by US fiscal year, FY%d to FY%d",
+  labs(title = "Skilled professional jobs certified for Australians, over time",
+       subtitle = sprintf("Certified Labor Condition Applications by occupation group and US fiscal year, FY%d to FY%d",
                           min(lca_trend$fy), max(lca_trend$fy)),
        x = NULL, y = NULL,
        caption = paste0("Source: US Department of Labor, Office of Foreign Labor Certification, LCA disclosure data. ",
-                        "Occupation groups are SOC major groups.\n",
-                        "Employers file an LCA for each new E-3 job, transfer and extension, so LCAs ",
+                        "Occupation groups are SOC major groups. Visa class E-3.\n",
+                        "Employers file an LCA for each new job, transfer and extension, so LCAs ",
                         "exceed visas issued and are not a count of people.")) +
   theme_csis()
 
@@ -699,12 +710,12 @@ p_lca_ec <- ggplot(emp_city, aes(lcas, item)) +
   scale_fill_manual(values = c("Top employers" = csis_colours[["navy"]],
                                "Top worksite cities" = csis_colours[["teal"]])) +
   scale_x_continuous(labels = comma, expand = expansion(c(0, 0.18))) +
-  labs(title = "E-3 jobs certified for Australians: top employers and worksite cities",
-       subtitle = sprintf("Certified E-3 Labor Condition Applications, US fiscal year %d", lca_fy),
+  labs(title = "Skilled professional jobs certified for Australians, by employer and city",
+       subtitle = sprintf("Certified Labor Condition Applications, top employers and worksite cities, US fiscal year %d", lca_fy),
        x = NULL, y = NULL,
        caption = paste0("Source: US Department of Labor, Office of Foreign Labor Certification, LCA disclosure data. ",
-                        "Employer names lightly standardised; first listed worksite.\n",
-                        "Employers file an LCA for each new E-3 job, transfer and extension, so LCAs ",
+                        "Employer names lightly standardised; first listed worksite. Visa class E-3.\n",
+                        "Employers file an LCA for each new job, transfer and extension, so LCAs ",
                         "are not a count of people.")) +
   theme_csis() +
   theme(panel.grid.major.y = element_blank(),

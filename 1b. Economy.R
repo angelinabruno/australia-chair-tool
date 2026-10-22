@@ -201,16 +201,31 @@ gdp <- bind_rows(gdp_au, gdp_us) |>
 
 stopifnot(n_distinct(gdp$country) == 2)
 
-p_gdp <- gdp |>
-  filter(date >= as.Date("2000-01-01")) |>
+# Zoomed in so ordinary booms and busts are visible: the y axis stops at
+# GROWTH_YLIM and the COVID-19 swings, which would flatten everything else,
+# run off the scale (their size is given in the subtitle).
+GROWTH_YLIM <- c(-4.5, 6.5)
+gdp_recent  <- gdp |> filter(date >= as.Date("2000-01-01"))
+off_scale   <- gdp_recent |>
+  filter(yoy < GROWTH_YLIM[1] | yoy > GROWTH_YLIM[2]) |>
+  group_by(country) |>
+  summarise(lo = min(yoy), hi = max(yoy), .groups = "drop")
+off_note <- if (nrow(off_scale) == 0) "" else
+  paste0("
+COVID-19 swings run off the scale (",
+         paste(sprintf("%s %+.1f%% to %+.1f%%", sub("United States", "US", off_scale$country),
+                       off_scale$lo, off_scale$hi), collapse = "; "), ").")
+
+p_gdp <- gdp_recent |>
   ggplot(aes(date, yoy, colour = country)) +
   geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.4) +
   geom_line(linewidth = 0.7) +
   scale_colour_manual(values = au_us_colours) +
-  scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1)) +
-  scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
+  scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1), breaks = seq(-4, 6, 2)) +
+  scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"), date_labels = "%Y") +
+  coord_cartesian(ylim = GROWTH_YLIM) +
   labs(title = "Australian and US real GDP growth",
-       subtitle = "Through the year, seasonally adjusted",
+       subtitle = paste0("Through the year, seasonally adjusted.", off_note),
        x = NULL, y = NULL,
        caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0);",
                        "US BEA.")) +
@@ -227,14 +242,14 @@ gdp_idx <- index_to(bind_rows(gdp_au, gdp_us), gdp_base_year)
 stopifnot(!anyNA(gdp_idx$base))
 
 p_gdp_idx <- gdp_idx |>
-  filter(date >= as.Date("2001-01-01")) |>
+  filter(date >= as.Date("2000-01-01")) |>
   ggplot(aes(date, index, colour = country)) +
   geom_hline(yintercept = 100, colour = csis_colours[["ltgrey"]],
              linewidth = 0.4, linetype = "dashed") +
   geom_line(linewidth = 0.7) +
   scale_colour_manual(values = au_us_colours) +
   scale_y_continuous(labels = label_number(accuracy = 1)) +
-  scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
+  scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"), date_labels = "%Y") +
   labs(title = "Real GDP, Australia and the United States",
        subtitle = paste0("Index, ", gdp_base_year, " = 100. Chain volume / chained dollars, ",
                          "seasonally adjusted."),
@@ -244,6 +259,44 @@ p_gdp_idx <- gdp_idx |>
   theme_csis()
 
 save_plot(p_gdp_idx, "gdp_index_au_us.png")
+
+# Growth and level together, for the dashboard's single "GDP" tab
+p_gdp_both <- (p_gdp + labs(title = "Real GDP growth", caption = NULL)) /
+  (p_gdp_idx + labs(title = "Real GDP level") + theme(legend.position = "none")) +
+  plot_annotation(title = "Real GDP, Australia and the United States",
+                  theme = theme_csis())
+save_plot(p_gdp_both, "gdp_au_us.png", width = 8, height = 8)
+
+# Booms and busts: how much through-the-year growth swings in each decade.
+# The standard deviation is the typical distance of a quarter's growth rate
+# from that decade's average, so a taller bar means bigger booms and busts.
+vol <- gdp |>
+  mutate(decade = floor(year(date) / 10) * 10) |>
+  filter(decade >= 1960) |>
+  group_by(country, decade) |>
+  summarise(sd = sd(yoy), quarters = n(), .groups = "drop") |>
+  mutate(decade_lab = ifelse(decade == max(decade),
+                             paste0(decade, "s\n(to ", format(max(gdp$date), "%Y"), ")"),
+                             paste0(decade, "s")))
+write.csv(vol, "gdp_volatility_au_us.csv", row.names = FALSE)
+
+p_vol <- ggplot(vol, aes(decade_lab, sd, fill = country)) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7) +
+  geom_text(aes(label = sprintf("%.1f", sd)), position = position_dodge(width = 0.75),
+            vjust = -0.4, size = 3, family = "source_sans", colour = csis_colours[["grey"]]) +
+  scale_fill_manual(values = au_us_colours) +
+  scale_y_continuous(labels = label_number(accuracy = 1, suffix = " pts"),
+                     expand = expansion(c(0, 0.1))) +
+  labs(title = "How much real GDP growth swings, Australia and the United States",
+       subtitle = paste0("Standard deviation of through-the-year real GDP growth in each decade, ",
+                         "percentage points.
+Taller bars mean bigger booms and busts."),
+       x = NULL, y = NULL,
+       caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0);",
+                       "US BEA, National Income and Product Accounts, Table 1.1.6.")) +
+  theme_csis() +
+  theme(panel.grid.major.x = element_blank())
+save_plot(p_vol, "gdp_volatility_au_us.png", width = 8, height = 4.8)
 
 # Australia: ABS A3606058X (output per hour worked)
 # US: BLS PRS84006093, business sector labor productivity (output per hour
