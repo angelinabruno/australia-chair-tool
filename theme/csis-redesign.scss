@@ -161,6 +161,7 @@ $border-radius:           6px;
 
 .ov .ov-meta { display: block !important; }
 .ov .ov-meta b { display: inline !important; }
+.ov .ov-meta span { display: inline !important; }
 .ov .ov-thumb { height: 170px; }
 
 // ---- A$ / US$ toggle (top bar, left; see theme/navigation.html) -------------
@@ -200,3 +201,17 @@ $border-radius:           6px;
 .ov .ov-facts tbody th { text-align: left; color: $ink; font-weight: 600; }
 .ov .ov-facts td small { display: block; color: $muted; }
 .ov .ov-facts-note { color: $muted; font-size: 0.76rem; margin: 8px 0 0; }
+
+// ---- Edition menu and banner (quarterly editions; see '3. Editions.R') -------
+.navbar .edition-menu { margin: 0 14px 0 0; flex: 0 0 auto; }
+.navbar .edition-toggle {
+  border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; background: transparent;
+  color: rgba(255,255,255,0.85); font: inherit; font-size: 0.8rem; font-weight: 700; padding: 3px 12px;
+}
+.navbar .edition-toggle:hover { color: #fff; border-color: #fff; }
+.navbar .edition-menu .dropdown-item small { color: $muted; font-weight: 400; margin-left: 4px; }
+.edition-banner {
+  background: lighten($gold, 38%); border-bottom: 1px solid $gold; color: $ink;
+  font-size: 0.9rem; padding: 7px 16px; text-align: center;
+  a { font-weight: 700; color: $navy; }
+}

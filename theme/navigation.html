@@ -1,5 +1,5 @@
 <!-- Added to the end of the dashboard by '2. Australia Chair Tool.qmd'
-     (include-after-body). Two jobs:
+     (include-after-body). Three jobs (the third, the Edition menu, is at the end):
      1. Groups some pages into drop-down menus in the top bar.
      2. Adds the A$ / US$ toggle at the left of the top bar. Charts with a US$
         version carry it in data-usd (see theme/currency.lua); headline numbers
@@ -120,5 +120,45 @@
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (e) {}
   apply(saved === "USD" ? "USD" : "AUD");
+
+  // ---- 3. Edition menu: earlier quarters of the dashboard ---------------------
+  // Each quarter's dashboard is filed in editions/ by '3. Editions.R' and
+  // listed in editions/editions.json. The menu appears once there is at least
+  // one earlier edition; it needs the published site (not a file opened from
+  // disk), because it reads editions.json.
+  var stamp = document.getElementById("csis-edition");
+  if (!stamp) return;
+  var archived = stamp.dataset.archived === "true";
+  var here = stamp.dataset.id;
+  var base = archived ? "" : "editions/";
+  var latestHref = archived ? "../2.%20Australia%20Chair%20Tool.html" : null;
+
+  if (archived) {
+    var banner = document.createElement("div");
+    banner.className = "edition-banner";
+    banner.innerHTML = "You are viewing the <b>" + stamp.dataset.label + " edition</b> (data to " +
+      stamp.dataset.dataTo + "). <a href=\"" + latestHref + "\">Go to the latest edition &rarr;</a>";
+    var nav = document.querySelector(".navbar");
+    if (nav) nav.after(banner);
+  }
+
+  fetch(base + "editions.json", { cache: "no-cache" })
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (list) {
+      if (!Array.isArray(list) || !list.length) return;
+      var wrap = document.createElement("div");
+      wrap.className = "edition-menu dropdown";
+      var items = '<li><a class="dropdown-item' + (archived ? "" : " active") + '" href="' +
+        (archived ? latestHref : "#") + '">Latest (' + (archived ? "current" : stamp.dataset.label) + ')</a></li>';
+      list.forEach(function (ed) {
+        items += '<li><a class="dropdown-item' + (ed.id === here && archived ? " active" : "") +
+          '" href="' + base + ed.file + '">' + ed.label + ' <small>data to ' + ed.data_to + '</small></a></li>';
+      });
+      wrap.innerHTML = '<button class="edition-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" ' +
+        'aria-expanded="false" title="Earlier quarterly editions of the dashboard">Edition: ' +
+        (archived ? stamp.dataset.label : "Latest") + '</button><ul class="dropdown-menu">' + items + "</ul>";
+      box.after(wrap);
+    })
+    .catch(function () {});
 })();
 </script>

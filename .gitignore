@@ -8,6 +8,7 @@
 !/2. Australia Chair Tool.html
 !/index.html
 !/theme/navigation.html
+!/editions/*.html
 *.pptx
 .Rhistory
 .RData

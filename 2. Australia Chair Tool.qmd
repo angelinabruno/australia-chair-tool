@@ -23,6 +23,11 @@ filters:
 suppressPackageStartupMessages({ library(readr); library(dplyr) })
 
 safely_num <- function(expr) tryCatch(expr, error = function(e) NULL)
+
+# Quarterly edition this render belongs to (release dates in editions/release_dates.csv)
+if (Sys.getenv("DASHBOARD_DIR") == "") Sys.setenv(DASHBOARD_DIR = normalizePath(getwd(), winslash = "/"))
+source("3. Editions.R")
+edition <- edition_for()
 fmt_money <- function(bn, sym = "A$") {
   if (is.null(bn) || length(bn) == 0 || is.na(bn)) return("n/a")
   if (bn >= 1000) sprintf("%s%.2f<small>tn</small>", sym, bn / 1000) else sprintf("%s%.1f<small>bn</small>", sym, bn)
@@ -166,7 +171,7 @@ cat(paste0(
   '<div class="ov-kicker">CSIS Australia Chair</div>',
   '<h1 class="ov-title">Australia and the United States</h1>',
   '<p class="ov-lede">An interactive guide to the full breadth of the US&ndash;Australia economic and strategic relationship: trade, investment, critical minerals, energy, technology, human capital and innovation.</p>',
-  '<div class="ov-meta">Updated quarterly &middot; Last updated <b>', trimws(format(Sys.Date(), "%e %B %Y")), '</b></div>',
+  '<div class="ov-meta">Updated quarterly &middot; ', edition_stamp(edition), ' &middot; Last updated <b>', trimws(format(Sys.Date(), "%e %B %Y")), '</b></div>',
   '</section>',
   '<div class="ov-stats">', paste(stats, collapse = ""), '</div>',
   '<section class="ov-section"><h2 class="ov-h2">Explore the relationship</h2>',

@@ -1,0 +1,6 @@
+release_date,label,data_to,source
+2026-09-02,September 2026,June quarter 2026,Assumed (ABS releases on the first Wednesday of the month); check against the ABS release calendar
+2026-12-02,December 2026,September quarter 2026,ABS release calendar (5206.0)
+2027-03-03,March 2027,December quarter 2026,ABS release calendar (5206.0)
+2027-06-02,June 2027,March quarter 2027,ABS release calendar (5206.0)
+2027-09-01,September 2027,June quarter 2027,ABS release calendar (5206.0)

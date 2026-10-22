@@ -35,6 +35,12 @@ Sys.setenv(DASHBOARD_DIR = normalizePath(DASHBOARD_DIR, winslash = "/"))
 # Each script starts from the dashboard folder. If one fails, the rest still
 # run. Names start with "." so rm(list = ls()) inside a script can't delete them.
 
+# Before anything changes, file the published dashboard as an edition if a
+# new ABS national accounts release date has passed since it was made
+# (see '3. Editions.R'; the dates are in editions/release_dates.csv).
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "3. Editions.R"))
+archive_previous_edition()
+
 .log <- NULL
 for (.s in .scripts) {
   setwd(Sys.getenv("DASHBOARD_DIR"))
