@@ -5,6 +5,7 @@ if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Economy"))
 source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
 
 # Australian economy charts
 #   1. Real GDP growth, Australia and Australia vs US
@@ -299,6 +300,70 @@ p_prod <- prod |>
 
 save_plot(p_prod, "productivity_au_us.png")
 
+# Productivity levels: GDP per hour worked, whole economy, US$ at 2020 PPPs
+# (constant prices), from the OECD Productivity Database. The index above
+# shows growth; this shows the gap in levels.
+oecd_pdb <- fetch_us(paste0("https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_PDB@DF_PDB,/",
+                            "AUS+USA.A.GDPHRS._T.USD_PPP_H.LR.N._Z.PPP?startPeriod=1990&format=csv"),
+                     file.path(RAW_DIR, "oecd_gdp_per_hour.csv"))
+prod_lv <- utils::read.csv(oecd_pdb) |>
+  transmute(country = recode(REF_AREA, AUS = "Australia", USA = "United States"),
+            year = as.integer(TIME_PERIOD), value = OBS_VALUE, base = BASE_PER) |>
+  arrange(country, year)
+stopifnot(n_distinct(prod_lv$country) == 2)
+prod_lv_latest <- prod_lv |> group_by(country) |> slice_max(year, n = 1) |> ungroup()
+
+p_prod_lv <- ggplot(prod_lv, aes(year, value, colour = country)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(data = prod_lv_latest, size = 1.8) +
+  geom_text(data = prod_lv_latest, aes(label = sprintf("$%.0f", value)),
+            hjust = -0.3, size = 3.2, family = "source_sans", show.legend = FALSE) +
+  scale_colour_manual(values = au_us_colours) +
+  scale_y_continuous(labels = label_dollar(accuracy = 1), limits = c(0, NA),
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(breaks = seq(1990, 2030, 5), expand = expansion(mult = c(0.01, 0.06))) +
+  labs(title = "GDP per hour worked, Australia and the United States",
+       subtitle = paste0("Whole economy, US dollars at constant ", prod_lv$base[1],
+                         " purchasing power parities"),
+       x = NULL, y = NULL,
+       caption = paste("Source: OECD Productivity Database (GDP per hour worked).",
+                       "\nPPPs adjust for price differences, so the same in A$ and US$ views.")) +
+  theme_csis()
+
+save_plot(p_prod_lv, "productivity_level_au_us.png")
+
+# Real GDP per person. Australia: ABS GDP per capita, chain volume measures,
+# seasonally adjusted (5206.0 Table 1). US: BEA real GDP (A191RX) over
+# population (B230RC, NIPA Table 2.1, thousands, midperiod).
+pc_au <- read_abs("5206.0", tables = 1) |>
+  filter(series == "GDP per capita: Chain volume measures ;",
+         series_type == "Seasonally Adjusted") |>
+  select(date, value) |> mutate(country = "Australia")
+stopifnot(nrow(pc_au) > 0)
+pc_us <- inner_join(bea_nipa_q("A191RX"), bea_nipa_q("B230RC"), by = "date",
+                    suffix = c("_gdp", "_pop")) |>
+  transmute(date, value = value_gdp / value_pop, country = "United States")
+pc_idx <- index_to(bind_rows(pc_au, pc_us), gdp_base_year)
+
+p_gdp_pc <- pc_idx |>
+  filter(date >= as.Date("2000-01-01")) |>
+  ggplot(aes(date, index, colour = country)) +
+  geom_hline(yintercept = 100, colour = csis_colours[["ltgrey"]],
+             linewidth = 0.4, linetype = "dashed") +
+  geom_line(linewidth = 0.7) +
+  scale_colour_manual(values = au_us_colours) +
+  scale_y_continuous(labels = label_number(accuracy = 1)) +
+  scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"), date_labels = "%Y") +
+  labs(title = "Real GDP per person, Australia and the United States",
+       subtitle = paste0("Index, ", gdp_base_year, " = 100. Chain volume / chained dollars, ",
+                         "seasonally adjusted, quarterly."),
+       x = NULL, y = NULL,
+       caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0), Table 1;",
+                       "US BEA, NIPA Tables 1.1.6 and 2.1 (real GDP over population).")) +
+  theme_csis()
+
+save_plot(p_gdp_pc, "gdp_per_capita_au_us.png")
+
 
 # 3. GVA by industry ------------------------------------------------------
 
@@ -318,20 +383,33 @@ gva <- read_abs("5206.0", tables = 45) |>
 
 stopifnot(n_distinct(gva$industry) == 19)
 
-latest_q <- max(gva$date)
+# Levels: the latest financial year from the annual national accounts
+# (5204.0 Table 5, current prices), so one quarter's seasonality can't move
+# the ranking. The quarterly data above feed the contributions chart only.
+gva_fy <- read_abs("5204.0", tables = 5) |>
+  filter(grepl("\\([A-S]\\) ;  Current prices ;$", series), !is.na(value)) |>
+  transmute(date, industry = trimws(sub("\\s*\\([A-S]\\).*$", "", series)), value)
+gva_fy_all <- read_abs("5204.0", tables = 5) |>
+  filter(series == "All industries ;  Current prices ;", !is.na(value)) |>
+  select(date, total = value)
+stopifnot(n_distinct(gva_fy$industry) == 19)
 
-level_ind <- gva |>
-  filter(date == latest_q) |>
-  mutate(share = 100 * value / sum(value)) |>
+latest_fy  <- max(gva_fy$date)                         # June of the year it ends
+fy_name    <- function(d) paste0(year(d) - 1, "-", format(d, "%y"))
+
+level_ind <- gva_fy |>
+  filter(date == latest_fy) |>
+  left_join(gva_fy_all, by = "date") |>
+  mutate(share = 100 * value / total) |>               # share of all-industry GVA
   arrange(desc(value)) |>
   mutate(industry = factor(industry, levels = industry))
 
 stopifnot(nrow(level_ind) == 19)
 print(head(level_ind, 3))   # check the title still holds
 
-# Drawn twice, in A$ and US$ (at the quarter's average rate).
+# Drawn twice, in A$ and US$ (at the financial year's average rate).
 make_level_ind <- function(cur) {
-  d <- level_ind |> mutate(value = if (cur == "USD") value * fx_quarter(latest_q) else value)
+  d <- level_ind |> mutate(value = if (cur == "USD") value * fx_financial_year(year(latest_fy)) else value)
   ggplot(d, aes(value, industry)) +
   geom_col(fill = csis_colours[["navy"]], width = 0.75) +
   geom_text(aes(label = sprintf("%s%sbn (%.1f%%)", cur_sym[[cur]],
@@ -343,15 +421,98 @@ make_level_ind <- function(cur) {
   scale_y_discrete(limits = rev) +   # largest bar at the top
   labs(title = "Australian gross value added by industry",
        subtitle = paste0("Gross value added by ANZSIC division, current prices, ", cur_sym[[cur]], ", ",
-                         format(latest_q, "%B %Y"), " quarter. Share of total in brackets."),
+                         fy_name(latest_fy), " financial year. Share of all-industry GVA in brackets."),
        x = NULL, y = NULL,
-       caption = paste("Source: ABS, Australian National Accounts (cat. no. 5206.0), Table 45.",
+       caption = paste("Source: ABS, Australian System of National Accounts (cat. no. 5204.0), Table 5.",
+                       "\nOwnership of dwellings (the rest of GVA) is not an ANZSIC division and is not shown.",
                        if (cur == "USD") fx_note[["USD"]] else "")) +
   theme_csis() +
   theme_bars
 }
 
 save_both(make_level_ind, "gva_level_industry.png", save_plot, width = 8, height = 7)
+
+# Industry shares, Australia vs US. US: BEA GDP by industry, value added
+# (TVA105-A, current dollars, calendar years). Sectors are matched as closely
+# as the two classifications allow (ANZSIC divisions and NAICS sectors).
+# Shares are of total value added in each country (US value added sums to
+# GDP; Australia's to GVA at basic prices, i.e. before taxes on products).
+bea_va <- fetch_us("https://apps.bea.gov/industry/Release/XLS/GDPxInd/ValueAdded.xlsx",
+                   file.path(RAW_DIR, "bea_ValueAdded.xlsx"))
+us_va_raw <- readxl::read_excel(bea_va, sheet = "TVA105-A", col_names = FALSE,
+                                .name_repair = "minimal")
+hdr <- which(us_va_raw[[1]] == "Line")
+us_va_yr <- max(suppressWarnings(as.integer(unlist(us_va_raw[hdr, -(1:2)]))), na.rm = TRUE)
+us_va <- data.frame(line  = suppressWarnings(as.integer(us_va_raw[[1]])),
+                    name  = us_va_raw[[2]],
+                    value = suppressWarnings(as.numeric(
+                      us_va_raw[[which(unlist(us_va_raw[hdr, ]) == as.character(us_va_yr))]]))) |>
+  filter(!is.na(line))
+us_line <- function(...) sum(us_va$value[us_va$line %in% c(...)])
+stopifnot("BEA value added table layout changed" =
+            us_va$name[us_va$line == 89] == "Government" & us_va$name[us_va$line == 62] == "Housing")
+
+# label, ANZSIC division (or "dwellings"), BEA lines
+sector_map <- list(
+  c("Agriculture, forestry and fishing", "Agriculture, forestry and fishing", 3),
+  c("Mining",                            "Mining", 6),
+  c("Manufacturing",                     "Manufacturing", 12),
+  c("Electricity, gas and water",        "Electricity, gas, water and waste services", 10),
+  c("Construction",                      "Construction", 11),
+  c("Wholesale trade",                   "Wholesale trade", 34),
+  c("Retail trade",                      "Retail trade", 35),
+  c("Accommodation and food",            "Accommodation and food services", 85),
+  c("Transport and warehousing",         "Transport, postal and warehousing", 40),
+  c("Information and telecommunications","Information media and telecommunications", 49),
+  c("Finance and insurance",             "Financial and insurance services", 55),
+  c("Real estate and rental",            "Rental, hiring and real estate services", c(63, 64)),
+  c("Housing (ownership of dwellings)",  "dwellings", 62),
+  c("Professional services",             "Professional, scientific and technical services", c(66, 70)),
+  c("Administrative and support",        "Administrative and support services", 71),
+  c("Government / public administration","Public administration and safety", 89),
+  c("Education",                         "Education and training", 75),
+  c("Health care and social assistance", "Health care and social assistance", 76),
+  c("Arts and recreation",               "Arts and recreation services", 82),
+  c("Other services",                    "Other services", 88)
+)
+au_dw <- read_abs("5204.0", tables = 5) |>
+  filter(series == "Ownership of dwellings ;  Current prices ;", date == latest_fy) |> pull(value)
+au_total <- gva_fy_all$total[gva_fy_all$date == latest_fy]
+us_total <- us_line(1)
+va_share <- bind_rows(lapply(sector_map, function(s) {
+  au_v <- if (s[2] == "dwellings") au_dw else level_ind$value[level_ind$industry == s[2]]
+  data.frame(sector = s[1],
+             country = c("Australia", "United States"),
+             share = c(100 * au_v / au_total,
+                       100 * us_line(as.integer(s[-(1:2)])) / us_total))
+}))
+stopifnot(abs(sum(va_share$share[va_share$country == "Australia"]) - 100) < 1,
+          abs(sum(va_share$share[va_share$country == "United States"]) - 100) < 1)
+
+va_order <- va_share |> filter(country == "Australia") |> arrange(share) |> pull(sector)
+p_va_share <- va_share |>
+  mutate(sector = factor(sector, levels = va_order),
+         country = factor(country, levels = c("United States", "Australia"))) |>
+  ggplot(aes(share, sector, fill = country)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  scale_fill_manual(values = au_us_colours, breaks = c("Australia", "United States")) +
+  scale_x_continuous(labels = label_percent(scale = 1, accuracy = 1),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(title = "Industry shares of the economy, Australia and the United States",
+       subtitle = paste0("Share of total value added, current prices. Australia ", fy_name(latest_fy),
+                         " financial year; United States ", us_va_yr, "."),
+       x = NULL, y = NULL,
+       caption = paste0("Sources: ABS, Australian System of National Accounts (cat. no. 5204.0), Table 5; ",
+                        "US BEA, GDP by Industry (value added, TVA105).",
+                        "
+Sectors matched across ANZSIC and NAICS. US government-run schools and hospitals are in",
+                        "
+Government; in Australia they are in Education and Health.",
+                        "\nUS professional services include management of companies; US utilities exclude waste services.")) +
+  theme_csis() +
+  theme_bars
+
+save_plot(p_va_share, "gva_share_au_us.png", width = 8, height = 7.5)
 
 # Contributions to through-the-year growth: each group's 4-quarter change over
 # the total 4 quarters earlier, so the contributions add up to total growth.
@@ -409,20 +570,39 @@ save_plot(p_contrib, "gva_p_contrib.png", width = 9, height = 5)
 
 # 5. Relative size --------------------------------------------------------
 
-# Aggregate GDP vs GDP per capita (World Bank)
+# One source for Australia's GDP in all three size charts: ABS current-price
+# GDP (5206.0, original, the four quarters of the calendar year), converted
+# at the RBA's average A$/US$ rate for the year. The US is from BEA
+# (A191RC, current dollars, annual average of the quarterly annual rates).
+au_gdp_cy <- read_abs_series("A2302467A") |>
+  mutate(year = year(date)) |>
+  group_by(year) |>
+  filter(n() == 4) |>
+  summarise(aud_bn = sum(value) / 1000, .groups = "drop") |>
+  mutate(usd_tn = aud_bn * fx_calendar_year(year) / 1000)
+us_gdp_cy <- bea_nipa_q("A191RC") |>
+  mutate(year = year(date)) |>
+  group_by(year) |>
+  filter(n() == 4) |>
+  summarise(usd_tn = mean(value) / 1e6, .groups = "drop")
+au_gdp_usd_tn <- function(yr) au_gdp_cy$usd_tn[au_gdp_cy$year == yr]
+GDP_SRC_AU <- "ABS (cat. no. 5206.0), converted at the RBA's average rate for the year"
+
+# GDP per capita at PPP (World Bank): international dollars, no market rate
 wb <- WDI(country = c("AU", "US"),
-          indicator = c(gdp_usd  = "NY.GDP.MKTP.CD",       # GDP, current US$
-                        pcap_ppp = "NY.GDP.PCAP.PP.CD"),   # GDP per capita, PPP
+          indicator = c(pcap_ppp = "NY.GDP.PCAP.PP.CD"),   # GDP per capita, PPP
           extra = FALSE)
 
 size_yr <- wb |>
-  filter(!is.na(gdp_usd), !is.na(pcap_ppp)) |>
+  filter(!is.na(pcap_ppp)) |>
   count(year) |>
-  filter(n == 2) |>
+  filter(n == 2, year %in% au_gdp_cy$year, year %in% us_gdp_cy$year) |>
   pull(year) |>
   max()
 
-size <- wb |> filter(year == size_yr)
+size <- wb |> filter(year == size_yr) |>
+  mutate(gdp_usd = 1e12 * if_else(country == "Australia", au_gdp_usd_tn(size_yr),
+                                  us_gdp_cy$usd_tn[us_gdp_cy$year == size_yr]))
 stopifnot(nrow(size) == 2)
 
 with(size, cat(sprintf("US is %.1fx Australia in aggregate, %.2fx per capita (PPP)\n",
@@ -457,7 +637,9 @@ make_size <- function(cur) {
   (p_agg | p_pcap) +
     plot_annotation(
       title   = "Aggregate GDP and GDP per capita, Australia and the United States",
-      caption = paste0("Source: World Bank World Development Indicators, ", size_yr, ".",
+      caption = paste0("Sources: aggregate GDP, Australia ", GDP_SRC_AU, "; US BEA.",
+                       "
+GDP per capita, World Bank World Development Indicators. ", size_yr, ".",
                        if (cur == "AUD") fx_note_aud_from_usd else ""),
       theme   = theme_csis()
     )
@@ -485,9 +667,8 @@ message("States retrieved: ", n_distinct(state_gdp$state), " of 50")
 
 states_yr <- max(state_gdp$year)
 
-au_wb  <- WDI(country = "AU", indicator = c(gdp = "NY.GDP.MKTP.CD")) |> filter(!is.na(gdp))
-au_yr  <- min(states_yr, max(au_wb$year))
-au_val <- au_wb$gdp[au_wb$year == au_yr] / 1e12
+au_yr  <- min(states_yr, max(au_gdp_cy$year))
+au_val <- au_gdp_usd_tn(au_yr)
 
 comb <- state_gdp |>
   filter(year == states_yr) |>
@@ -515,15 +696,17 @@ make_states <- function(cur) {
   geom_col(width = 0.72) +
   geom_text(aes(label = sprintf("%s%.2ftn", sym, value)), hjust = -0.15,
             size = 2.9, family = "source_sans", colour = csis_colours[["grey"]]) +
-  scale_fill_manual(values = c(`TRUE`  = csis_colours[["red"]],
-                               `FALSE` = csis_colours[["ltgrey"]]), guide = "none") +
+  scale_fill_manual(values = c(`TRUE`  = csis_colours[["navy"]],
+                               `FALSE` = "#E8A9AB"), guide = "none") +   # US states: light red
   scale_x_continuous(labels = label_number(prefix = sym, suffix = "tn", accuracy = 0.5),
                      expand = expansion(mult = c(0, 0.18))) +
   labs(title = "GDP of Australia and US states",
-       subtitle = paste0("GDP, current ", sym, ", ", states_yr, ". Australia shown in red."),
+       subtitle = paste0("GDP, current ", sym, ", ", states_yr, ". Australia in navy, the 15 largest US states in red."),
        x = NULL, y = NULL,
-       caption = paste("Sources: US BEA, GDP by state (SAGDP2); World Bank World Development Indicators.",
-                       if (cur == "AUD") fx_note_aud_from_usd else "")) +
+       caption = paste0("Sources: US BEA, GDP by state (SAGDP2).
+Australia, ", GDP_SRC_AU, ".",
+                        if (au_yr != states_yr) paste0(" Australia ", au_yr, ".") else "",
+                        if (cur == "AUD") fx_note_aud_from_usd else "")) +
   theme_csis() +
   theme_bars
 }
@@ -561,10 +744,18 @@ full_years <- wb_oecd |>
 if (!length(full_years)) stop("No year has GDP for all 38 OECD members; move the start year back.")
 oecd_yr <- max(full_years)
 
+# Australia from the ABS, as in the other two charts (World Bank for the rest)
+au_oecd_wb <- wb_oecd$gdp_usd[wb_oecd$code == "AU" & wb_oecd$year == oecd_yr]
+if (length(au_gdp_usd_tn(oecd_yr)))
+  wb_oecd$gdp_usd[wb_oecd$code == "AU" & wb_oecd$year == oecd_yr] <- 1e12 * au_gdp_usd_tn(oecd_yr)
+message(sprintf("Australia %d: ABS/RBA US$%.3ftn vs World Bank US$%.3ftn",
+                oecd_yr, au_gdp_usd_tn(oecd_yr), au_oecd_wb / 1e12))
+
 ranked <- wb_oecd |>
   filter(year == oecd_yr) |>
   arrange(desc(gdp_usd)) |>
-  mutate(rank = row_number(), is_au = country == "Australia")
+  mutate(rank = row_number(), is_au = country == "Australia",
+         who = case_when(is_au ~ "au", country == "United States" ~ "us", TRUE ~ "other"))
 
 stopifnot(nrow(ranked) == length(oecd_members), sum(ranked$is_au) == 1)
 
@@ -591,25 +782,85 @@ make_oecd_rank <- function(cur) {
   conv <- if (cur == "AUD") 1 / fx_calendar_year(oecd_yr) else 1
   sym  <- cur_sym[[cur]]
   d <- oecd_plot |> mutate(v = gdp_usd * conv / 1e12)
-  ggplot(d, aes(v, country_label, fill = is_au)) +
+  ggplot(d, aes(v, country_label, fill = who)) +
   geom_col(width = 0.72) +
-  geom_text(data = filter(d, is_au),
+  geom_text(data = filter(d, who != "other"),
             aes(label = paste0(sym, number(v, accuracy = 0.01), "tn")),
             hjust = -0.15, size = 3.1, family = "source_sans",
             colour = csis_colours[["grey"]]) +
-  scale_fill_manual(values = c(`TRUE`  = csis_colours[["red"]],
-                               `FALSE` = csis_colours[["ltgrey"]]), guide = "none") +
+  scale_fill_manual(values = c(au = csis_colours[["navy"]], us = csis_colours[["red"]],
+                               other = csis_colours[["ltgrey"]]), guide = "none") +
   scale_x_continuous(labels = label_dollar(prefix = sym, suffix = "tn", accuracy = 1),
                      expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Largest OECD economies by nominal GDP",
        subtitle = paste0("Nominal GDP, current ", sym, ", ", oecd_yr,
                          ". Ranking is among all 38 OECD members."),
        x = NULL, y = NULL,
-       caption = paste("Source: World Bank World Development Indicators (GDP, current US$);",
-                       "OECD membership list.",
+       caption = paste0("Sources: World Bank World Development Indicators (GDP, current US$); OECD membership list.",
+                        "\nAustralia: ", GDP_SRC_AU, ", as in the other size charts.",
                        if (cur == "AUD") fx_note_aud_from_usd else "")) +
   theme_csis() +
   theme_bars
 }
 
 save_both(make_oecd_rank, "oecd_gdp_rank_australia.png", save_plot, width = 8, height = 6.2)
+
+# Takeaways under each chart ---------------------------------------------
+
+local({
+  ec <- function(file) file.path("Economy", file)
+  # Australia vs the nearest US state, e.g. "about the size of Florida"
+  near <- comb |> filter(!is_au) |> slice_min(abs(value - au_val), n = 1)
+  au_r <- comb$rank[comb$is_au]
+  line_states <- function(cur) {
+    k <- if (cur == "AUD") 1 / fx_calendar_year(states_yr) else 1
+    sprintf("Australia's economy (%s) is about the size of %s's (%s); it would rank %s among US states.",
+            sprintf("%s%.2ftn", cur_sym[[cur]], au_val * k), near$name,
+            sprintf("%s%.2ftn", cur_sym[[cur]], near$value * k), ordinal(au_r))
+  }
+  takeaway(ec("au_vs_us_states.png"), line_states("AUD"), line_states("USD"))
+
+  r <- with(size, c(agg = gdp_usd[country == "United States"] / gdp_usd[country == "Australia"],
+                    pc  = pcap_ppp[country == "United States"] / pcap_ppp[country == "Australia"]))
+  takeaway(ec("au_us_size.png"), sprintf(
+    "The US economy is %.0f times the size of Australia's; GDP per person is %.0f%% higher in the US (%d, at purchasing power parity).",
+    r[["agg"]], 100 * (r[["pc"]] - 1), size_yr))
+
+  takeaway(ec("oecd_gdp_rank_australia.png"), sprintf(
+    "Australia is the %s-largest of the 38 OECD economies (%d).", ordinal(au_rank), oecd_yr))
+
+  g <- gdp_idx |> group_by(country) |> slice_max(date, n = 1) |> ungroup()
+  takeaway(ec("gdp_au_us.png"), sprintf(
+    "Since %d, real GDP has grown %.0f%% in Australia and %.0f%% in the United States.",
+    gdp_base_year, g$index[g$country == "Australia"] - 100, g$index[g$country == "United States"] - 100))
+
+  pc <- pc_idx |> group_by(country) |> slice_max(date, n = 1) |> ungroup()
+  takeaway(ec("gdp_per_capita_au_us.png"), sprintf(
+    "Per person, real GDP has grown %.0f%% in Australia and %.0f%% in the United States since %d.",
+    pc$index[pc$country == "Australia"] - 100, pc$index[pc$country == "United States"] - 100, gdp_base_year))
+
+  pr <- prod |> group_by(country) |> slice_max(date, n = 1) |> ungroup()
+  takeaway(ec("productivity_au_us.png"), sprintf(
+    "Output per hour has risen %.0f%% in the Australian market sector and %.0f%% in the US business sector since %d.",
+    pr$index[pr$country == "Australia"] - 100, pr$index[pr$country == "United States"] - 100, prod_base_year))
+
+  lv <- prod_lv_latest
+  takeaway(ec("productivity_level_au_us.png"), sprintf(
+    "An hour of work produced about $%.0f of GDP in Australia and $%.0f in the United States in %d (constant PPP US$), a gap of %.0f%%.",
+    lv$value[lv$country == "Australia"], lv$value[lv$country == "United States"], max(lv$year),
+    100 * (lv$value[lv$country == "United States"] / lv$value[lv$country == "Australia"] - 1)))
+
+  top <- level_ind[1, ]
+  line_gva <- function(cur) sprintf(
+    "%s is Australia's largest industry, at %s or %.0f%% of value added in %s.",
+    top$industry, fmt_bn((top$value / 1000) * if (cur == "USD") fx_financial_year(year(latest_fy)) else 1,
+                         cur_sym[[cur]], 0),
+    top$share, fy_name(latest_fy))
+  takeaway(ec("gva_level_industry.png"), line_gva("AUD"), line_gva("USD"))
+
+  m <- va_share |> tidyr::pivot_wider(names_from = country, values_from = share)
+  mi <- m[m$sector == "Mining", ]
+  takeaway(ec("gva_share_au_us.png"), sprintf(
+    "Mining makes up %.0f%% of Australia's economy against %.1f%% of the US economy.",
+    mi$Australia, mi$`United States`))
+})
