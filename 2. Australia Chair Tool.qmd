@@ -9,6 +9,7 @@ format:
     scrolling: false
 filters:
   - theme/currency.lua   # attaches each chart's US$ version for the toggle
+  - theme/takeaways.lua  # one-line finding under each chart (takeaways.tsv)
 ---
 
 # Overview {scrolling="true"}
@@ -707,47 +708,146 @@ map
 
 ![](Tech/F_rd_intensity.png){title="Gross domestic expenditure on R&D, % of GDP"}
 
-# Data centres {orientation="columns"}
+# Data centres {scrolling="true"}
 
-## Column {.tabset width="50%" title="Information media and telecommunications"}
+## Row {height="640px"}
+
+### Column {.tabset title="Power and demand"}
+
+#### Demand by region
+
+![](<Data centres/10_dc_demand_by_region.png>){title="Data centre electricity demand by NEM region"}
+
+#### Share of electricity
+
+![](<Data centres/12_dc_share_of_grid_au_us.png>){title="Data centres' share of electricity use, Australia and the US"}
+
+#### Connection pipeline
+
+![](<Data centres/11_dc_connection_pipeline.png>){title="Data centres seeking transmission connections"}
+
+#### Sydney grid capacity
+
+![](<Data centres/13_transgrid_sydney_capacity.png>){title="Sydney data centre connection enquiries and capacity"}
+
+### Column {.tabset title="Investment"}
+
+#### By financial year
+
+![](<Data centres/08_divj_financial_year.png>){title="Information Media & Telecommunications capital expenditure by financial year"}
+
+#### Share of national capex
+
+![](<Data centres/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
+
+#### Expected equipment spending
+
+![](<Data centres/06_actual_vs_expected_epm_divj.png>){title="Equipment capex: estimates and outturn by financial year"}
+
+#### Buildings
+
+![](<Data centres/14_commercial_nec_building.png>){title="Commercial buildings n.e.c.: work done and approvals"}
+
+#### Computer imports
+
+![](<Data centres/15_computer_imports.png>){title="Imports of computers and parts"}
+
+### Column {.tabset title="Cost to build and run"}
+
+#### US power prices
+
+![](<Data centres/16_us_industrial_power_prices.png>){title="Industrial electricity prices, US data centre states"}
+
+#### Costs compared
+
+```{r}
+#| echo: false
+#| output: asis
+# Hand-maintained figures, each checked against its source (Data centres/dc_reference_data.csv)
+ref <- read.csv("Data centres/dc_reference_data.csv", comment.char = "#", stringsAsFactors = FALSE)
+show <- ref[ref$dataset %in% c("cbre_vacancy", "gencost_capex"), ]
+fmt <- function(v, u) if (u == "%") paste0(v, "%") else if (u == "A$/kW") paste0("A$", format(v, big.mark = ","), "/kW") else paste(v, u)
+rows <- vapply(seq_len(nrow(show)), function(i) with(show[i, ], sprintf(
+  "<tr><td>%s</td><td>%s</td><td class=\"num\">%s</td><td>%s</td><td><a href=\"%s\" target=\"_blank\" rel=\"noopener\">%s</a></td></tr>",
+  item, region, fmt(value, unit), period, url, htmltools::htmlEscape(source))), "")
+cat('<div class="dc-table"><table><thead><tr><th>Measure</th><th>Where / what</th><th>Value</th><th>Period</th><th>Source</th></tr></thead><tbody>',
+    rows, '</tbody></table>',
+    '<p class="dc-note">Colocation vacancy shows how tight each market is. New-build generation costs (CSIRO GenCost, A$ 2025-26) set the cost of the power a new data centre would need. ',
+    'Not yet included, because the data are behind a paywall or licence or could not be checked: colocation rents for Sydney (CBRE), Ausgrid sub-transmission network charges, ASX Energy futures, ',
+    'NREL ATB US technology costs, industrial land values (JLL, Knight Frank), grid emissions factors (DCCEEW, EPA eGRID), Turner &amp; Townsend city build costs, LevelTen and DC Byte.</p></div>')
+```
+
+#### Policy
+
+<div class="dc-text">
+
+**National expectations.** On 23 March 2026 the Australian Government published its expectations of data centre and AI infrastructure developers under the National AI Plan. They cover new or expanded large facilities (hyperscale and large AI compute) and set out five areas: the national interest, energy, water, workforce and innovation. They are not binding, but proposals that align with them are to be prioritised in Commonwealth approval processes, with states, territories and the energy market bodies involved in putting them into practice.
+
+**Who pays for grid capacity.** In Sydney, Transgrid has signed connection agreements for about 1.5 GW of data centres in Western Sydney, which the existing network can carry, and says it cannot offer more without augmenting the network. On 26 August 2026 it set out a pathway to up to 2 GW more, including a new South Creek 500/330 kV substation, with the cost borne by the data centres that want to connect rather than by other electricity users.
+
+Sources: [Clayton Utz](https://www.claytonutz.com/insights/2026/march/great-expectations-what-the-australian-government-requires-of-data-centres-and-ai-infrastructure) and [HSF Kramer](https://www.hsfkramer.com/insights/2026-03/national-expectations-for-the-development-of-data-centres-and-ai-infrastructure-have-been-released-what-you-need-to-know) summaries of the expectations; Transgrid, [Sydney basin network capacity update](https://www.transgrid.com.au/media/d2raj504/20260820-sydney-basin-network-capacity-update.pdf) (20 August 2026) and [news release](https://www.transgrid.com.au/media-publications/news-articles/new-transmission-capacity-in-sydney-to-be-funded-by-data-centres/) (26 August 2026).
+
+</div>
+
+## Row {.tabset height="640px" title="More detail"}
+
+### Projects and commitments
+
+```{r}
+#| echo: false
+#| output: asis
+# Hand-maintained (Data centres/dc_projects_tracker.csv): official or company pages only
+trk <- read.csv("Data centres/dc_projects_tracker.csv", comment.char = "#", stringsAsFactors = FALSE)
+cell <- function(x) ifelse(is.na(x) | x == "", "&ndash;", htmltools::htmlEscape(as.character(x)))
+amt  <- ifelse(is.na(trk$amount_aud_bn), "&ndash;", sprintf("A$%sbn", trk$amount_aud_bn))
+rows <- sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"num\">%s</td><td>%s</td><td><a href=\"%s\" target=\"_blank\" rel=\"noopener\">source</a></td></tr>",
+                cell(trk$type), cell(trk$name), cell(trk$location), cell(trk$company), amt, cell(trk$period), trk$url)
+cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitment</th><th>Location</th><th>Company</th><th>Value</th><th>Period</th><th></th></tr></thead><tbody>',
+    paste(rows, collapse = ""), '</tbody></table>',
+    '<p class="dc-note">NSW Investment Delivery Authority projects are listed by name only; the NSW Government gives a total (15 projects, A$51.89bn) but not values for each project, and names 14 of the 15. ',
+    'Only figures stated on an official government or company page are included.</p></div>')
+```
 
 ### Investment by asset
 
 ![](<Data centres/01_divj_by_asset.png>){title="Investment by asset"}
 
-### Share of national capex
+### Equipment by industry
 
-![](<Data centres/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
+![](<Data centres/03_epm_actual_by_industry.png>){title="Equipment, plant and machinery capex by industry"}
 
-### Investment by financial year
+### Expected equipment by industry
 
-![](<Data centres/08_divj_financial_year.png>){title="Capital expenditure by financial year"}
+![](<Data centres/04_epm_expected_by_industry.png>){title="Expected equipment capex by industry, same estimate each year"}
+
+### Expected buildings, all industries
+
+![](<Data centres/05_actual_vs_expected_bs_total.png>){title="Buildings and structures capex: estimates and outturn"}
+
+### Realisation ratio
+
+![](<Data centres/07_realisation_ratio_divj_epm.png>){title="Realisation ratio: outturn over first estimate"}
 
 ### Real building capex
 
 ![](<Data centres/09_real_momentum.png>){title="Real building and structures capex"}
 
-## Column {.tabset width="50%" title="By industry, and actual against expected"}
+### How to read this page
 
-### EPM by industry
+<div class="dc-text">
 
-![](<Data centres/03_epm_actual_by_industry.png>){title="EPM by industry"}
+- **Information Media & Telecommunications (IMT).** The ABS industry (ANZSIC division J) that includes data centres, along with telecommunications, broadcasting and publishing. The ABS does not publish data centre spending on its own, so IMT is the closest official measure.
+- **EPM.** Equipment, plant and machinery: servers, network gear, cooling and power equipment. **B&S** is buildings and structures.
+- **Capex.** Private new capital expenditure (ABS 5625.0), current prices, not adjusted for inflation unless the chart says "real".
+- **Estimates 1 to 7.** The ABS asks firms about each financial year seven times: three times before it starts (estimates 1-3), three times during it (4-6) and once it ends (7, the actual outturn). Comparing the same estimate number across years is like for like.
+- **Realisation ratio.** Actual spending divided by the first estimate (estimate 1). Above 1x means firms spent more than they first planned.
+- **Commercial buildings n.e.c.** "Not elsewhere classified": the ABS building category that includes data centres, along with other commercial buildings it does not list separately.
+- **SITC 752 and 759.** Standard International Trade Classification codes for computers and for computer parts.
+- **MW, GW, TWh.** Megawatts and gigawatts measure power drawn at a point in time (1 GW = 1,000 MW); terawatt hours measure energy used over a year.
+- **NEM.** The National Electricity Market, the grid covering Queensland, New South Wales, the ACT, Victoria, South Australia and Tasmania.
+- **Gaps in lines.** Quarters the ABS does not publish (marked "np") are left as gaps, not drawn across.
 
-### Expected EPM by industry
-
-![](<Data centres/04_epm_expected_by_industry.png>){title="Expected EPM by industry"}
-
-### Actual vs expected, total
-
-![](<Data centres/05_actual_vs_expected_bs_total.png>){title="Actual vs expected capex, buildings and structures"}
-
-### Actual vs expected, EPM
-
-![](<Data centres/06_actual_vs_expected_epm_divj.png>){title="Actual vs expected capex, equipment"}
-
-### Realisation ratio
-
-![](<Data centres/07_realisation_ratio_divj_epm.png>){title="Realisation ratio"}
+</div>
 
 # Human capital {orientation="columns"}
 

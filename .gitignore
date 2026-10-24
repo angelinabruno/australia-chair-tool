@@ -74,6 +74,9 @@ Critical minerals/**
 !Data centres/07_realisation_ratio_divj_epm.png
 !Data centres/08_divj_financial_year.png
 !Data centres/09_real_momentum.png
+!Data centres/1[0-6]_*.png
+!Data centres/dc_reference_data.csv
+!Data centres/dc_projects_tracker.csv
 !Energy/0*.png
 !Critical minerals/minerals_au_*.png
 !Migration/nom_usa_national.png

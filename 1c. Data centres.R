@@ -620,3 +620,264 @@ local({
     "After removing price changes, the industry's building spending was %.0f%% higher in the %s quarter than a year earlier.",
     100 * g9, format(max(r9$date), "%B %Y")))
 })
+
+
+# 13. Power, building and costs: data centres directly -------------------
+
+# ABS capex covers the whole Information Media & Telecommunications industry.
+# These charts look at data centres themselves: their electricity demand and
+# grid connections (AEMO, Transgrid), the buildings (ABS building activity and
+# approvals, "Commercial buildings n.e.c.", where the ABS classifies data
+# centres), the computers that go in them (ABS imports) and what power costs
+# in US data centre states (EIA).
+#
+# Figures that come from reports rather than data files are kept by hand in
+# dc_reference_data.csv and dc_projects_tracker.csv (in this folder), each
+# with its source and link. Update them when AEMO publishes each Quarterly
+# Energy Dynamics and when the other sources are revised.
+
+ref <- utils::read.csv("dc_reference_data.csv", comment.char = "#", stringsAsFactors = FALSE)
+ref_get <- function(ds) ref[ref$dataset == ds, ]
+to_qtr  <- function(d) as.Date(paste0(format(d, "%Y"), "-",
+                                      sprintf("%02d", (as.integer(format(d, "%m")) - 1) %/% 3 * 3 + 3), "-01"))
+
+# 13a. Data centre demand by region (AEMO QED)
+dem <- ref_get("aemo_qed_demand") |>
+  mutate(period = factor(period, levels = unique(period)),
+         region = factor(region, levels = c("New South Wales", "Victoria")))
+p10 <- ggplot(dem, aes(region, value, fill = period)) +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7) +
+  geom_text(aes(label = paste0(value, " MW")), position = position_dodge(width = 0.75),
+            vjust = -0.5, size = 3.4, family = "source_sans", colour = csis_colours[["grey"]]) +
+  scale_fill_manual(values = c(csis_colours[["ltgrey"]], csis_colours[["navy"]])) +
+  scale_y_continuous(labels = label_comma(suffix = " MW"), expand = expansion(c(0, 0.12))) +
+  labs(title = "Average electricity demand of data centres by NEM region",
+       subtitle = "Average demand over the quarter, megawatts",
+       x = NULL, y = NULL,
+       caption = paste0("Source: AEMO, Quarterly Energy Dynamics Q2 2026. ",
+                        "Q2 2025 for New South Wales is derived from AEMO's +35% year-on-year change.\n",
+                        "Other regions are small (South Australia 2%, Queensland 1% of FY26 data centre demand; AEMO 2026 ESOO)."))
+save_csis(p10, "10_dc_demand_by_region.png", height = 5)
+
+# 13b. Connection pipeline by stage (AEMO QED)
+pipe <- ref_get("aemo_qed_pipeline") |>
+  left_join(ref_get("aemo_qed_pipeline_projects") |> select(item, projects = value), by = "item") |>
+  mutate(item = factor(item, levels = rev(item)))
+pipe_reg <- ref_get("aemo_qed_pipeline_region")
+p11 <- ggplot(pipe, aes(value, item)) +
+  geom_col(fill = csis_colours[["navy"]], width = 0.6) +
+  geom_text(aes(label = sprintf("%.1f GW (%d projects)", value, projects)),
+            hjust = -0.08, size = 3.4, family = "source_sans", colour = csis_colours[["grey"]]) +
+  scale_x_continuous(labels = label_number(suffix = " GW"), expand = expansion(c(0, 0.35))) +
+  labs(title = "Data centres in AEMO's transmission connection process",
+       subtitle = sprintf("Maximum connection capacity by stage, %s: %d projects, %.1f GW",
+                          pipe$period[1], sum(pipe$projects), sum(pipe$value)),
+       x = NULL, y = NULL,
+       caption = paste0("Source: AEMO, Quarterly Energy Dynamics Q2 2026. Projects that have formally applied to AEMO; ",
+                        "loads under 5 MW are connected by network businesses.\nCapacity by region: ",
+                        paste(sprintf("%s %s%%", pipe_reg$region, pipe_reg$value), collapse = ", "), ".")) +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4))
+save_csis(p11, "11_dc_connection_pipeline.png", height = 4)
+
+# 13c. Data centres' share of grid electricity, Australia vs US
+gs <- bind_rows(ref_get("grid_share"), ref_get("grid_share_low"), ref_get("grid_share_high")) |>
+  mutate(year = as.integer(substr(period, 1, 4)) + if_else(grepl("-", period), 1L, 0L),
+         country = if_else(region == "United States", "United States", "Australia"))
+gs_line <- filter(gs, dataset == "grid_share")
+gs_rng  <- tibble(year = 2028,
+                  lo = gs$value[gs$dataset == "grid_share_low"],
+                  hi = gs$value[gs$dataset == "grid_share_high"])
+p12 <- ggplot() +
+  geom_linerange(data = gs_rng, aes(x = year, ymin = lo, ymax = hi),
+                 colour = csis_colours[["red"]], linewidth = 3, alpha = 0.35) +
+  geom_line(data = filter(gs_line, country == "Australia"), aes(year, value, colour = country),
+            linewidth = 0.9, linetype = "22") +
+  geom_point(data = gs_line, aes(year, value, colour = country), size = 2.6) +
+  geom_text(data = gs_line, aes(year, value, colour = country, label = paste0(value, "%")),
+            vjust = -1, size = 3.3, family = "source_sans", show.legend = FALSE) +
+  annotate("text", x = 2028.3, y = gs_rng$hi,
+           label = paste0("US range for 2028: ", gs_rng$lo, "-", gs_rng$hi, "%"),
+           hjust = 0, vjust = 1, size = 3.1, family = "source_sans", colour = csis_colours[["red"]]) +
+  scale_colour_manual(values = c(Australia = csis_colours[["navy"]], `United States` = csis_colours[["red"]])) +
+  scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1), limits = c(0, 15),
+                     expand = expansion(c(0, 0.02))) +
+  scale_x_continuous(breaks = seq(2022, 2036, 2), limits = c(2022, 2037)) +
+  labs(title = "Data centres' share of electricity use, Australia and the United States",
+       subtitle = "Actual and forecast share of grid electricity consumption",
+       x = NULL, y = NULL,
+       caption = paste("Sources: AEMO, 2026 ESOO data centre forecasting overview (NEM, Step Change scenario,",
+                       "financial years shown by the year they end);\nLawrence Berkeley National Laboratory,",
+                       "2024 United States Data Center Energy Usage Report (share of total US electricity use).",
+                       "\nAustralia covers the NEM only (not Western Australia or the Northern Territory)."))
+save_csis(p12, "12_dc_share_of_grid_au_us.png", height = 5)
+
+# 13d. Transgrid: Sydney basin enquiries vs capacity
+tg <- ref_get("transgrid_sydney")
+tg$label <- factor(c("Connection enquiries\n(more than)", "Signed connection\nagreements",
+                     "Extra capacity if data\ncentres pay for upgrades"),
+                   levels = c("Connection enquiries\n(more than)", "Signed connection\nagreements",
+                              "Extra capacity if data\ncentres pay for upgrades"))
+tg$fill <- c("req", "have", "maybe")
+p13 <- ggplot(tg, aes(label, value, fill = fill)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = paste0(value, " GW")), vjust = -0.5, size = 3.6,
+            family = "source_sans", colour = csis_colours[["grey"]]) +
+  scale_fill_manual(values = c(req = csis_colours[["ltgrey"]], have = csis_colours[["navy"]],
+                               maybe = csis_colours[["teal"]]), guide = "none") +
+  scale_y_continuous(labels = label_number(suffix = " GW"), expand = expansion(c(0, 0.1))) +
+  labs(title = "Data centre demand for grid connections in Sydney, and the capacity available",
+       subtitle = "Transgrid transmission network, Sydney basin, gigawatts",
+       x = NULL, y = NULL,
+       caption = paste("Sources: Transgrid, Sydney basin network capacity update, 20 August 2026;
+",
+                       "Transgrid, New transmission capacity in Sydney to be funded by data centres, 26 August 2026.",
+                       "\nTransgrid says it cannot offer further capacity without network augmentation, which data centres would fund."))
+save_csis(p13, "13_transgrid_sydney_capacity.png", height = 5)
+
+# 13e. Buildings: value of work done and approvals, Commercial buildings n.e.c.
+# 8752.0 (quarterly) and 8731.0 (monthly, summed to quarters), private sector,
+# current prices, original.
+bld_ids <- c(done = "A751834F", approved = "A119227564K")
+bld <- read_abs(series_id = unname(bld_ids)) |>
+  transmute(series_id, date = as.Date(date), value = value / 1000) |>   # $'000 -> $ million
+  mutate(measure = names(bld_ids)[match(series_id, bld_ids)], qtr = to_qtr(date)) |>
+  group_by(measure, qtr) |>
+  summarise(value = sum(value), n = n(), .groups = "drop") |>
+  filter(measure == "done" | n == 3) |>       # complete quarters of monthly approvals
+  arrange(measure, qtr) |>
+  filter(qtr >= as.Date("2009-01-01"))
+bld_lbl <- c(done = "Value of work done", approved = "Value of building approved")
+bld_for <- function(cur) bld |>
+  mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(qtr)) else value) |>
+  group_by(measure) |> mutate(roll4 = roll4(value)) |> ungroup() |>
+  filter(qtr >= as.Date("2010-01-01"))
+make_p14 <- function(cur) {
+  d <- bld_for(cur) |> mutate(measure = factor(bld_lbl[measure], levels = bld_lbl))
+  ggplot(d, aes(qtr, roll4 / 1000, colour = measure)) +
+    geom_line(linewidth = 0.9) +
+    scale_colour_manual(values = setNames(c(csis_colours[["navy"]], csis_colours[["teal"]]), bld_lbl)) +
+    scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 1),
+                       expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
+    scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+    labs(title = "Building work on commercial buildings not elsewhere classified",
+         subtitle = paste("Private sector, rolling four-quarter sum. The ABS includes data centres in this category,",
+                          "\nalongside other commercial buildings it does not list separately"),
+         x = NULL, y = NULL,
+         caption = paste("Sources: ABS, Building Activity, Australia (cat. 8752.0), Table 51;",
+                         "ABS, Building Approvals, Australia (cat. 8731.0), Table 51.\nCurrent prices, original.",
+                         if (cur == "USD") fx_note[["USD"]] else ""))
+}
+save_both(make_p14, "14_commercial_nec_building.png", save_csis, height = 5)
+
+# 13f. Computers and parts imported (SITC 752 + 759), next to IMT equipment capex
+# ABS Data API, merchandise imports by SITC and country of origin, monthly, A$ thousand.
+imp_url <- paste0("https://data.api.abs.gov.au/rest/data/ABS,MERCH_IMP,1.0.0/",
+                  "752+759.TOT+USA.TOT.M?startPeriod=2010-01")
+imp_file <- file.path("raw", "abs_merch_imp_752_759.csv")
+dir.create("raw", showWarnings = FALSE)
+if (!file.exists(imp_file) || difftime(Sys.time(), file.mtime(imp_file), units = "days") > 7)
+  utils::download.file(imp_url, imp_file, mode = "wb", quiet = TRUE,
+                       headers = c(Accept = "application/vnd.sdmx.data+csv"))
+imp <- utils::read.csv(imp_file) |>
+  transmute(origin = COUNTRY_ORIGIN, date = as.Date(paste0(TIME_PERIOD, "-01")),
+            value = OBS_VALUE / 1000) |>                            # A$ million
+  mutate(qtr = to_qtr(date)) |>
+  group_by(origin, qtr) |>
+  summarise(value = sum(value), n = n_distinct(date), .groups = "drop") |>
+  filter(n == 3) |> select(-n)
+imt_epm <- cp |>
+  filter(measure == "Actual", industry == IMT, asset == EPM, date >= as.Date("2010-01-01")) |>
+  transmute(origin = "IMT", qtr = date, value)
+imp_lbl <- c(TOT = "Imports of computers and parts, all countries",
+             USA = "Imports of computers and parts from the US",
+             IMT = "Information Media & Telecommunications equipment capex")
+make_p15 <- function(cur) {
+  d <- bind_rows(imp, imt_epm) |>
+    mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(qtr)) else value,
+           series = factor(imp_lbl[origin], levels = imp_lbl))
+  ggplot(d, aes(qtr, value / 1000, colour = series)) +
+    geom_line(linewidth = 0.8) +
+    scale_colour_manual(values = setNames(c(csis_colours[["navy"]], csis_colours[["red"]],
+                                            csis_colours[["gold"]]), imp_lbl)) +
+    scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 1),
+                       expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
+    scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
+    guides(colour = guide_legend(ncol = 1)) +
+    labs(title = "Imports of computers and parts, and equipment spending by the industry",
+         subtitle = "Quarterly, current prices",
+         x = NULL, y = NULL,
+         caption = paste("Sources: ABS, merchandise imports by SITC and country of origin (ABS Data API),",
+                         "SITC 752 (computers) and 759 (parts);\nABS 5625.0 for capex.",
+                         GAPS, if (cur == "USD") fx_note[["USD"]] else ""))
+}
+save_both(make_p15, "15_computer_imports.png", save_csis, height = 5.5)
+
+# 13g. Cost to run: industrial electricity prices in US data centre states
+eia <- ref_get("eia_industrial_price")
+eia_yr <- as.integer(eia$period[1])
+eia_k  <- function(cur) if (cur == "AUD") 10 / fx_calendar_year(eia_yr) else 10   # c/kWh -> $/MWh
+make_p16 <- function(cur) {
+  d <- eia |> mutate(v = value * eia_k(cur), us = region == "US average",
+                     region = reorder(region, v))
+  ggplot(d, aes(v, region, fill = us)) +
+    geom_col(width = 0.65) +
+    geom_text(aes(label = sprintf("%s%.0f", cur_sym[[cur]], v)), hjust = -0.15, size = 3.2,
+              family = "source_sans", colour = csis_colours[["grey"]]) +
+    scale_fill_manual(values = c(`TRUE` = csis_colours[["red"]], `FALSE` = "#E8A9AB"), guide = "none") +
+    scale_x_continuous(labels = label_dollar(prefix = cur_sym[[cur]]), expand = expansion(c(0, 0.15))) +
+    labs(title = "Average industrial electricity price, US data centre states",
+         subtitle = paste0("Average retail price to industrial customers, ", eia_yr, ", ", cur_sym[[cur]], " per MWh"),
+         x = NULL, y = NULL,
+         caption = paste0("Source: US EIA, Electric Power Annual, Table 2.10 (published in US cents per kWh).",
+                          "\nAll-in retail prices (energy, network and other charges). No comparable official",
+                          "\nseries is published for Australian industrial users.",
+                          if (cur == "AUD") fx_note_aud_from_usd else "")) +
+    theme(panel.grid.major.y = element_blank(),
+          panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4))
+}
+save_both(make_p16, "16_us_industrial_power_prices.png", save_csis, height = 5)
+
+# Takeaways for section 13
+local({
+  dc <- function(file) file.path("Data centres", file)
+  nsw <- dem[dem$region == "New South Wales", ]; vic <- dem[dem$region == "Victoria", ]
+  takeaway(dc("10_dc_demand_by_region.png"), sprintf(
+    "Data centres drew %d MW on average in New South Wales and %d MW in Victoria in %s, up from %d MW and %d MW a year earlier.",
+    nsw$value[2], vic$value[2], nsw$period[2], nsw$value[1], vic$value[1]))
+  takeaway(dc("11_dc_connection_pipeline.png"), sprintf(
+    "%d data centre projects totalling %.1f GW are seeking transmission connections; data centres in NSW and Victoria drew about %.1f GW on average in %s.",
+    sum(pipe$projects), sum(pipe$value), sum(dem$value[dem$period == levels(dem$period)[2]]) / 1000,
+    levels(dem$period)[2]))
+  au <- gs_line[gs_line$country == "Australia", ]; au <- au[order(au$year), ]
+  takeaway(dc("12_dc_share_of_grid_au_us.png"), sprintf(
+    "AEMO expects data centres' share of NEM electricity use to rise from %s%% in %s to %s%% by %s; US data centres used %s%% of US electricity in 2023.",
+    au$value[1], au$period[1], au$value[nrow(au)], au$period[nrow(au)],
+    gs_line$value[gs_line$country == "United States"]))
+  takeaway(dc("13_transgrid_sydney_capacity.png"), sprintf(
+    "Transgrid has more than %s GW of data centre enquiries in Sydney, has signed about %s GW and says up to %s GW more is possible only if data centres pay for the upgrades.",
+    tg$value[1], tg$value[2], tg$value[3]))
+  line14 <- function(cur) {
+    b <- bld_for(cur) |> filter(measure == "done", !is.na(roll4)) |> arrange(qtr)
+    bl <- b[nrow(b), ]; bp <- b[nrow(b) - 4, ]
+    sprintf("Work done on these buildings was %s in the year to %s, %.0f%% more than a year earlier.",
+            fmt_bn(bl$roll4 / 1000, cur_sym[[cur]]), format(bl$qtr, "%B %Y"), 100 * (bl$roll4 / bp$roll4 - 1))
+  }
+  takeaway(dc("14_commercial_nec_building.png"), line14("AUD"), line14("USD"))
+  line15 <- function(cur) {
+    it <- imp |> mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(qtr)) else value) |>
+      group_by(origin) |> arrange(qtr) |> mutate(r4 = roll4(value)) |> ungroup()
+    tot <- it |> filter(origin == "TOT") |> arrange(qtr)
+    il <- tot[nrow(tot), ]; ip <- tot[nrow(tot) - 4, ]
+    us <- it |> filter(origin == "USA", qtr == il$qtr)
+    sprintf("Australia imported %s of computers and parts in the year to %s, up %.0f%%; %.0f%% came from the US.",
+            fmt_bn(il$r4 / 1000, cur_sym[[cur]]), format(il$qtr, "%B %Y"), 100 * (il$r4 / ip$r4 - 1),
+            100 * us$r4 / il$r4)
+  }
+  takeaway(dc("15_computer_imports.png"), line15("AUD"), line15("USD"))
+  line16 <- function(cur) sprintf(
+    "Industrial users paid an average %s%.0f/MWh in Virginia, the largest US data centre market, and %s%.0f/MWh in Texas in %d.",
+    cur_sym[[cur]], eia$value[eia$region == "Virginia"] * eia_k(cur),
+    cur_sym[[cur]], eia$value[eia$region == "Texas"] * eia_k(cur), eia_yr)
+  takeaway(dc("16_us_industrial_power_prices.png"), line16("AUD"), line16("USD"))
+})
