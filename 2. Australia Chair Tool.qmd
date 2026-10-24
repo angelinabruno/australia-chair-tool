@@ -766,13 +766,13 @@ map
 # Hand-maintained figures, each checked against its source (Data centres/dc_reference_data.csv)
 ref <- read.csv("Data centres/dc_reference_data.csv", comment.char = "#", stringsAsFactors = FALSE)
 show <- ref[ref$dataset %in% c("cbre_vacancy", "gencost_capex"), ]
-fmt <- function(v, u) if (u == "%") paste0(v, "%") else if (u == "A$/kW") paste0("A$", format(v, big.mark = ","), "/kW") else paste(v, u)
+fmt <- function(v, u) if (u == "%") paste0(v, "%") else if (u == "A$/kW") paste0("A&#36;", format(v, big.mark = ","), "/kW") else paste(v, u)
 rows <- vapply(seq_len(nrow(show)), function(i) with(show[i, ], sprintf(
   "<tr><td>%s</td><td>%s</td><td class=\"num\">%s</td><td>%s</td><td><a href=\"%s\" target=\"_blank\" rel=\"noopener\">%s</a></td></tr>",
-  item, region, fmt(value, unit), period, url, htmltools::htmlEscape(source))), "")
+  item, region, fmt(value, unit), period, url, gsub("$", "&#36;", htmltools::htmlEscape(source), fixed = TRUE))), "")
 cat('<div class="dc-table"><table><thead><tr><th>Measure</th><th>Where / what</th><th>Value</th><th>Period</th><th>Source</th></tr></thead><tbody>',
     rows, '</tbody></table>',
-    '<p class="dc-note">Colocation vacancy shows how tight each market is. New-build generation costs (CSIRO GenCost, A$ 2025-26) set the cost of the power a new data centre would need. ',
+    '<p class="dc-note">Colocation vacancy shows how tight each market is. New-build generation costs (CSIRO GenCost, A&#36; 2025-26) set the cost of the power a new data centre would need. ',
     'Not yet included, because the data are behind a paywall or licence or could not be checked: colocation rents for Sydney (CBRE), Ausgrid sub-transmission network charges, ASX Energy futures, ',
     'NREL ATB US technology costs, industrial land values (JLL, Knight Frank), grid emissions factors (DCCEEW, EPA eGRID), Turner &amp; Townsend city build costs, LevelTen and DC Byte.</p></div>')
 ```
@@ -799,12 +799,12 @@ Sources: [Clayton Utz](https://www.claytonutz.com/insights/2026/march/great-expe
 # Hand-maintained (Data centres/dc_projects_tracker.csv): official or company pages only
 trk <- read.csv("Data centres/dc_projects_tracker.csv", comment.char = "#", stringsAsFactors = FALSE)
 cell <- function(x) ifelse(is.na(x) | x == "", "&ndash;", htmltools::htmlEscape(as.character(x)))
-amt  <- ifelse(is.na(trk$amount_aud_bn), "&ndash;", sprintf("A$%sbn", trk$amount_aud_bn))
+amt  <- ifelse(is.na(trk$amount_aud_bn), "&ndash;", sprintf("A&#36;%sbn", trk$amount_aud_bn))
 rows <- sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"num\">%s</td><td>%s</td><td><a href=\"%s\" target=\"_blank\" rel=\"noopener\">source</a></td></tr>",
                 cell(trk$type), cell(trk$name), cell(trk$location), cell(trk$company), amt, cell(trk$period), trk$url)
 cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitment</th><th>Location</th><th>Company</th><th>Value</th><th>Period</th><th></th></tr></thead><tbody>',
     paste(rows, collapse = ""), '</tbody></table>',
-    '<p class="dc-note">NSW Investment Delivery Authority projects are listed by name only; the NSW Government gives a total (15 projects, A$51.89bn) but not values for each project, and names 14 of the 15. ',
+    '<p class="dc-note">NSW Investment Delivery Authority projects are listed by name only; the NSW Government gives a total (15 projects, A&#36;51.89bn) but not values for each project, and names 14 of the 15. ',
     'Only figures stated on an official government or company page are included.</p></div>')
 ```
 
