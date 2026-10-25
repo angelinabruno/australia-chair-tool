@@ -95,6 +95,7 @@ Critical minerals/**
 !Patents/us_*.png
 !Patents/tm_*.png
 !Tech/[A-F]_*.png
+!Tech/technology_keywords.csv
 
 # US$ versions of the money charts (the A$/US$ toggle; see "0. Exchange rates.R")
 !Economy/*_usd.png

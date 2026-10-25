@@ -4,6 +4,7 @@ rm(list = ls())
 if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Tech"))
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
 
 # ==============================================================================
 # Australia in critical and emerging technologies
@@ -13,7 +14,7 @@ setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Tech"))
 #   C  Top Australian institutions per technology                     (OpenAlex)
 #   D  Collaboration partners: US vs China co-authorship              (OpenAlex)
 #   E  Frontier AI model development by country                       (Epoch AI)
-#   F  R&D intensity vs comparators                                   (World Bank)
+#   F  R&D intensity vs comparators                                   (OECD MSTI)
 #
 # Technology categories follow DISR's List of Critical Technologies in the
 # National Interest (updated July 2026) so output maps onto Australian policy
@@ -56,6 +57,9 @@ COMPARATORS <- c(
   jp = "Japan",     kr = "South Korea",   in_ = "India", ca = "Canada",
   de = "Germany"
 )
+
+# One colour per country across the dashboard: Australia navy, US red.
+AU_COL <- "#00205B"; US_COL <- "#D2232A"; CN_COL <- "#F2A900"; OTHER_COL <- "#b4b2a9"
 
 # Keyword definitions.
 # Quoted phrases are treated as phrases by OpenAlex; OR joins alternatives.
@@ -169,6 +173,12 @@ base_filters <- function(extra = character()) {
 
 kw_filter <- function(tech) paste0("title_and_abstract.search:", TECHNOLOGIES[[tech]])
 
+# The keyword lists, so readers can see exactly what each field counts
+write_csv(tibble(technology = names(TECHNOLOGIES), openalex_query = unname(TECHNOLOGIES),
+                 searched_in = "title and abstract", years = paste0(min(YEARS), "-", max(YEARS))),
+          "technology_keywords.csv")
+KW_NOTE <- "Fields are keyword searches of titles and abstracts; the keywords are in Tech/technology_keywords.csv."
+
 # OpenAlex group_by returns `key` in different shapes depending on the field:
 # a bare code ("AU"), a lowercase code ("au"), or a full URI
 # ("https://openalex.org/countries/AU"). Match on all of them plus the display
@@ -225,17 +235,19 @@ stopifnot("Module A returned no Australian rows - inspect peek() output above" =
 p_a <- au_share |>
   mutate(technology = fct_reorder(technology, share)) |>
   ggplot(aes(share, technology)) +
-  geom_col(fill = "#2a78d6", width = 0.65) +
+  geom_col(fill = AU_COL, width = 0.65) +
   geom_vline(xintercept = mean(au_share$share), linetype = "22", colour = "grey45") +
-  geom_text(aes(label = comma(au_papers)), hjust = -0.25, size = 3, colour = "grey30") +
+  geom_text(aes(label = sprintf("%s papers (%.1f%%)", comma(au_papers), 100 * share)),
+            hjust = -0.08, size = 3, colour = "grey30") +
   scale_x_continuous(labels = percent_format(accuracy = 0.1),
-                     expand = expansion(c(0, 0.15))) +
+                     expand = expansion(c(0, 0.3))) +
   labs(
     title    = "Australian share of world publications by critical technology",
     subtitle = paste0("Australian share of world publications, ", min(YEARS), "-", max(YEARS),
                       ". Dashed line is Australia's average across these fields."),
     x = NULL, y = NULL,
-    caption = "Source: OpenAlex. Keyword-based classification"
+    caption = paste("Source: OpenAlex. Labels show the number of Australian papers and the share of the world total.
+", KW_NOTE)
   ) +
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"),
@@ -284,13 +296,13 @@ p_b <- quality_gap |>
   geom_line(aes(group = technology), colour = "grey70", linewidth = 0.6) +
   geom_point(size = 3) +
   scale_colour_manual(values = c("All papers" = "#b4b2a9",
-                                 "Top 10% most cited" = "#2a78d6")) +
+                                 "Top 10% most cited" = AU_COL)) +
   scale_x_continuous(labels = percent_format(accuracy = 0.1)) +
   labs(
     title    = "Australian share of world publications: all papers and top 10% cited",
     subtitle = "Share of world output, all papers vs top decile by citations",
     x = NULL, y = NULL, colour = NULL,
-    caption = "Source: OpenAlex."
+    caption = paste("Source: OpenAlex.", KW_NOTE)
   ) +
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"),
@@ -393,8 +405,8 @@ p_d <- collab |>
   mutate(technology = fct_reorder(technology, share, .fun = max)) |>
   ggplot(aes(share, technology, fill = partner)) +
   geom_col(position = position_dodge(width = 0.7), width = 0.65) +
-  scale_fill_manual(values = c("with United States" = "#2a78d6",
-                               "with China" = "#eb6834")) +
+  scale_fill_manual(values = c("with United States" = US_COL,
+                               "with China" = CN_COL)) +
   scale_x_continuous(labels = percent_format(accuracy = 1),
                      expand = expansion(c(0, 0.05))) +
   labs(
@@ -402,7 +414,8 @@ p_d <- collab |>
     subtitle = paste0("Share of Australian publications ", min(YEARS), "-", max(YEARS),
                       " with at least one co-author institution in each country"),
     x = NULL, y = NULL, fill = NULL,
-    caption = "Source: OpenAlex. Shares overlap - a paper can have both US and Chinese co-authors."
+    caption = paste("Source: OpenAlex. Shares overlap - a paper can have both US and Chinese co-authors.
+", KW_NOTE)
   ) +
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"),
@@ -462,12 +475,13 @@ model_countries <- models |>
 print(model_countries, n = 25)   # confirm "Australia" appears as expected
 
 p_e <- model_countries |>
-  slice_max(n, n = 12) |>
-  mutate(country = fct_reorder(country, n),
-         is_au   = country == "Australia") |>
-  ggplot(aes(n, country, fill = is_au)) +
+  filter(row_number() <= 12 | country == "Australia") |>   # always show Australia
+  mutate(who = case_when(country == "Australia" ~ "au", country == "United States" ~ "us", TRUE ~ "other"),
+         country = fct_reorder(country, n)) |>
+  ggplot(aes(n, country, fill = who)) +
   geom_col(width = 0.65) +
-  scale_fill_manual(values = c(`TRUE` = "#eb6834", `FALSE` = "#b4b2a9"), guide = "none") +
+  geom_text(aes(label = comma(n)), hjust = -0.2, size = 3, colour = "grey30") +
+  scale_fill_manual(values = c(au = AU_COL, us = US_COL, other = OTHER_COL), guide = "none") +
   scale_x_continuous(labels = comma, expand = expansion(c(0, 0.1))) +
   labs(
     title    = "Notable AI models by country",
@@ -492,74 +506,106 @@ ggsave("E_ai_models_by_country.png", p_e, width = 9, height = 5.5, dpi = 150, bg
 # sits downstream of this.
 # ------------------------------------------------------------------------------
 
-library(WDI)
+# GERD as a share of GDP from the OECD's Main Science and Technology
+# Indicators (MSTI). For Australia these are the ABS's own R&D surveys (ABS
+# 8104.0 and 8112.0), which run every second year, so its line has fewer points.
+MSTI_URL <- paste0("https://sdmx.oecd.org/public/rest/data/OECD.STI.STP,DSD_MSTI@DF_MSTI,/",
+                   "AUS+USA+CHN+GBR+JPN+KOR+CAN+DEU+ISR.A.G.PT_B1GQ......?startPeriod=2005&format=csv")
 
-# The World Bank API is intermittently flaky (timeouts, 502s). Give it a longer
-# timeout and a few attempts, and make failure non-fatal so the rest of the
-# script still produces output. Check status by pasting this in a browser:
-# https://api.worldbank.org/v2/en/country/AU/indicator/GB.XPD.RSDV.GD.ZS?format=json
-fetch_wdi <- function(tries = 3, pause = 20) {
+fetch_msti <- function() {
   old <- options(timeout = 300); on.exit(options(old), add = TRUE)
-  for (i in seq_len(tries)) {
-    res <- tryCatch(
-      WDI(country   = c("AU", "US", "CN", "GB", "JP", "KR", "CA", "DE", "IL"),
-          indicator = c(gerd = "GB.XPD.RSDV.GD.ZS"),
-          start = 2005, end = 2024),
-      error = function(e) { message("WDI attempt ", i, " failed: ",
-                                    conditionMessage(e)); NULL }
-    )
-    if (!is.null(res) && nrow(res) > 0) return(res)
-    if (i < tries) { message("retrying in ", pause, "s..."); Sys.sleep(pause) }
-  }
-  NULL
+  tryCatch(read_csv(MSTI_URL, show_col_types = FALSE) |>
+             transmute(iso3c = REF_AREA, year = as.integer(TIME_PERIOD), gerd = OBS_VALUE),
+           error = function(e) { message("MSTI failed: ", conditionMessage(e)); NULL })
 }
 
-rd <- cached("F_wdi_rd", fetch_wdi(), max_age = 180)
+rd <- cached("F_msti_rd", fetch_msti(), max_age = 180)
 
 if (is.null(rd) || nrow(rd) == 0) {
-  unlink(file.path(CACHE_DIR, "F_wdi_rd.rds"))   # don't cache a failure
-  message("\n--- Module F skipped: World Bank API unavailable. ---\n",
-          "Rerun later, or use the OECD MSTI fallback described in the header.\n")
+  unlink(file.path(CACHE_DIR, "F_msti_rd.rds"))   # don't cache a failure
+  message("\n--- Module F skipped: OECD MSTI unavailable. ---\n")
 } else {
-  
-  # Build every derived column on rd itself, so the line layer and the label
-  # layer both see it. ISO codes are more reliable than country names.
+
+  iso2 <- c(AUS = "AU", USA = "US", CHN = "CN", GBR = "GB", JPN = "JP", KOR = "KR",
+            CAN = "CA", DEU = "DE", ISR = "IL")
   rd_plot <- rd |>
     filter(!is.na(gerd)) |>
-    mutate(is_au = iso3c == "AUS")
-  
+    mutate(who = case_when(iso3c == "AUS" ~ "au", iso3c == "USA" ~ "us", TRUE ~ "other"),
+           iso2c = iso2[iso3c]) |>
+    arrange(iso3c, year)
+
   # One label per country, at its most recent year
   rd_labels <- rd_plot |>
-    group_by(country) |>
+    group_by(iso3c) |>
     slice_max(year, n = 1, with_ties = FALSE) |>
     ungroup()
-  
-  p_f <- ggplot(rd_plot, aes(year, gerd, group = country)) +
-    geom_line(aes(colour = is_au, linewidth = is_au)) +
+
+  p_f <- ggplot(rd_plot, aes(year, gerd, group = iso3c)) +
+    geom_line(aes(colour = who, linewidth = who)) +
+    geom_point(data = filter(rd_plot, who == "au"), aes(colour = who), size = 1.8) +
     geom_text(
       data = rd_labels,
-      aes(label = iso2c, colour = is_au),
+      aes(label = iso2c, colour = who),
       hjust = -0.3, size = 3, show.legend = FALSE
     ) +
-    scale_colour_manual(values = c(`TRUE` = "#eb6834", `FALSE` = "#a8a69c"),
+    scale_colour_manual(values = c(au = AU_COL, us = US_COL, other = "#a8a69c"),
                         guide = "none") +
-    scale_linewidth_manual(values = c(`TRUE` = 1.2, `FALSE` = 0.6),
+    scale_linewidth_manual(values = c(au = 1.2, us = 1.2, other = 0.6),
                            guide = "none") +
     scale_x_continuous(expand = expansion(c(0.02, 0.06))) +
     labs(
       title    = "R&D intensity, Australia and comparators",
-      subtitle = "Gross domestic expenditure on R&D, per cent of GDP",
+      subtitle = "Gross domestic expenditure on R&D, per cent of GDP. Australia in navy, the United States in red",
       x = NULL, y = NULL,
-      caption = "Source: World Bank, World Development Indicators (GB.XPD.RSDV.GD.ZS)."
+      caption = paste("Source: OECD, Main Science and Technology Indicators (from the ABS R&D surveys for Australia,",
+                      "\nwhich are run every second year).")
     ) +
     theme_minimal(base_size = 11) +
     theme(plot.title = element_text(face = "bold"),
           plot.title.position = "plot",
           panel.grid.minor = element_blank())
-  
+
   ggsave("F_rd_intensity.png", p_f, width = 9, height = 5.5, dpi = 150, bg = "white")
-  
+
+  au_l <- rd_labels |> filter(iso3c == "AUS"); us_l <- rd_labels |> filter(iso3c == "USA")
+  oecd_rank <- rd_labels |> arrange(desc(gerd)) |> mutate(r = row_number())
+  takeaway("Tech/F_rd_intensity.png", sprintf(
+    "Australia spent %.2f%% of GDP on R&D in %d, against %.2f%% in the United States in %d.",
+    au_l$gerd, au_l$year, us_l$gerd, us_l$year))
+
 }   # end module F conditional
+
+# Takeaways for modules A-E
+local({
+  top <- au_share |> arrange(desc(share))
+  takeaway("Tech/A_australian_share_by_technology.png", sprintf(
+    "Australia's largest share of world research among these fields is in %s (%.1f%% of papers, %s papers); its smallest is in %s (%.1f%%).",
+    top$technology[1], 100 * top$share[1], comma(top$au_papers[1]),
+    top$technology[nrow(top)], 100 * top$share[nrow(top)]))
+  q <- quality_gap |> select(technology, measure, share) |>
+    pivot_wider(names_from = measure, values_from = share) |>
+    mutate(ratio = `Top 10% most cited` / `All papers`) |> arrange(desc(ratio))
+  takeaway("Tech/B_quality_vs_volume.png", if (any(q$ratio > 1)) sprintf(
+    "Australia's share of the most-cited papers is higher than its share of all papers in %d of %d fields, most of all in %s.",
+    sum(q$ratio > 1), nrow(q), q$technology[1]) else sprintf(
+    "Australia's share of the most-cited papers is below its share of all papers in all %d fields; the gap is smallest in %s.",
+    nrow(q), q$technology[1]))
+  ai <- au_institutions |> filter(technology == "Artificial intelligence") |> slice_max(n, n = 1)
+  takeaway("Tech/C_australian_institutions.png", sprintf(
+    "%s publishes the most Australian research on artificial intelligence (%s papers, %d-%d).",
+    str_remove(ai$label, "^The "), comma(ai$n), min(YEARS), max(YEARS)))
+  w <- collab |> select(technology, partner, share) |>
+    pivot_wider(names_from = partner, values_from = share)
+  takeaway("Tech/D_collaboration_partners.png", sprintf(
+    "Australian researchers co-author more with Chinese than US institutions in %d of %d fields.",
+    sum(w$`with China` > w$`with United States`), nrow(w)))
+  au_m <- model_countries$n[model_countries$country == "Australia"]
+  us_m <- model_countries$n[model_countries$country == "United States"]
+  takeaway("Tech/E_ai_models_by_country.png", sprintf(
+    "Organisations in the United States developed %s notable AI models since 2015; Australian organisations developed %s.",
+    comma(us_m), if (length(au_m)) comma(au_m) else "none"))
+})
+
 
 
 message("Done - charts written to ", getwd())
