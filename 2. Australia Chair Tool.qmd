@@ -599,7 +599,8 @@ mines$Family[is.na(mines$Family)] <- "Other"
 
 status_levels <- c("Mineral deposit", "Mine - under development",
                    "Operating mine", "Mine - care and maintenance")
-pal <- colorFactor(c("#5b8bd0", "#e0a020", "#2a9d5c", "#d13b3b"), status_levels)
+# Care and maintenance in grey: not operating, rather than a warning
+pal <- colorFactor(c("#5b8bd0", "#e0a020", "#2a9d5c", "#8C9196"), status_levels)
 
 mines <- mines |>
   mutate(Status = factor(Status, status_levels),
@@ -641,16 +642,18 @@ filter_status
 
 ## Column {.tabset}
 
+### Australia's global share
+
+![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
+
+### Map
+
 ```{r}
 #| title: "Critical minerals map"
 #| echo: false
 #| padding: 0
 map
 ```
-
-### Australia's global share
-
-![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
 
 ### Reserves vs production
 

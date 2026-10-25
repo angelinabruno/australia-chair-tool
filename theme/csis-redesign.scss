@@ -234,3 +234,11 @@ $border-radius:           6px;
 .dc-note { color: $muted; font-size: 0.78rem; margin-top: 10px; }
 .dc-text { overflow: auto; font-size: 0.9rem; line-height: 1.5; padding: 4px 8px; }
 .dc-text li { margin-bottom: 6px; }
+
+// Quarto's fill layout also squeezes the Overview sections to fit the card,
+// so at some widths the stat cards ran into the "Explore the relationship"
+// heading. Let the page flow at its natural height instead.
+.ov { display: block !important; }
+.ov > * { flex: none !important; min-height: auto !important; }
+.ov .ov-stats { display: grid !important; height: auto !important; }
+.ov .ov-section { display: block !important; clear: both; }
