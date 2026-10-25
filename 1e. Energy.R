@@ -5,6 +5,7 @@ if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Energy"))
 source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
 
 # ==============================================================================
 # Australian energy: five charts for a US policy audience
@@ -404,8 +405,12 @@ p4 <- ggplot(renew_hist, aes(year, share)) +
   scale_x_continuous(breaks = seq(2000, 2030, 5)) +
   labs(
     title    = "Renewable share of electricity generation and the 82% target for 2030",
-    subtitle = "Renewable share of total generation, financial years, against a straight-line path to target",
-    x = NULL, y = NULL, caption = SRC
+    subtitle = paste("Renewable share of all Australian electricity generation (all grids, off-grid and rooftop solar),",
+                     "
+financial years shown by the year they start, against a straight-line path to the target"),
+    x = NULL, y = NULL,
+    caption = paste(SRC, "
+The 82% target applies to the main grids (NEM and WA's SWIS), so this all-Australia share is a close proxy, not the official measure.")
   ) +
   theme_csis()
 
@@ -435,14 +440,15 @@ p5 <- gen_fy |>
   filter(region == "AUS", fuel %in% RENEWABLES, year >= 2005) |>
   mutate(fuel = as_fuel(fuel),
          twh  = gwh / 1000) |>          # named column so the CSV export can find it
+  mutate(fuel = droplevels(fuel)) |>   # legend lists only the renewable fuels shown
   ggplot(aes(year, twh, fill = fuel)) +
   geom_col(width = 0.75) +
-  scale_fill_manual(values = fuel_cols, drop = FALSE) +
+  scale_fill_manual(values = fuel_cols, drop = TRUE) +
   scale_y_continuous(labels = comma, expand = expansion(c(0, 0.05))) +
   scale_x_continuous(breaks = seq(2005, 2025, 5)) +
   labs(
     title    = "Renewable electricity generation by technology",
-    subtitle = "Renewable generation by technology, TWh, financial years",
+    subtitle = "Renewable generation by technology, TWh, financial years shown by the year they start",
     x = NULL, y = "TWh", caption = SRC
   ) +
   theme_csis()
@@ -818,13 +824,20 @@ qtr_label    <- function(d) paste0(format(d, "%Y"), " Q", (as.integer(format(d, 
 price_latest <- price_qtr |> filter(quarter == max(quarter))
 price_q      <- max(price_latest$quarter)
 
-price_cols <- c("Texas (ERCOT)" = "#D2232A", "California (SP15)" = "#00205B",
-                NSW = "#eda100", QLD = "#993c1d", VIC = "#2a78d6", SA = "#1baf7a")
+# Australia in navy shades, the US in red shades. The chart shows the two
+# largest NEM regions and the two US markets; QLD and SA go in the caption.
+price_cols <- c("Texas (ERCOT)" = "#D2232A", "California (SP15)" = "#F08A8E",
+                NSW = "#00205B", VIC = "#5B8BD0")
+CHART_REGIONS <- names(price_cols)
+note_regions  <- price_latest |> filter(!region %in% CHART_REGIONS)
 
 # Drawn twice: US$ (NEM converted) and A$ (US markets converted).
 make_p7 <- function(cur) {
-price_qtr    <- price_qtr    |> mutate(price = if (cur == "USD") price_usd else price_aud)
-price_latest <- price_latest |> mutate(price = if (cur == "USD") price_usd else price_aud)
+price_qtr    <- price_qtr    |> filter(region %in% CHART_REGIONS) |>
+  mutate(price = if (cur == "USD") price_usd else price_aud, region = droplevels(region))
+price_latest <- price_latest |> filter(region %in% CHART_REGIONS) |>
+  mutate(price = if (cur == "USD") price_usd else price_aud)
+others <- note_regions |> mutate(price = if (cur == "USD") price_usd else price_aud)
 ggplot(price_qtr, aes(quarter, price, colour = region)) +
   geom_line(aes(linewidth = region %in% us_markets)) +
   geom_point(size = 1.4) +
@@ -840,15 +853,19 @@ ggplot(price_qtr, aes(quarter, price, colour = region)) +
   labs(
     title    = if (has_ercot) "Wholesale electricity prices, Australian NEM regions, California and Texas (ERCOT)"
                else "Wholesale electricity prices, Australian NEM regions and California",
-    subtitle = sprintf(paste0("Average wholesale spot price, %s per MWh, quarterly, %s to %s. ",
-                              "Australian states are NEM regions."),
+    subtitle = sprintf(paste0("Average wholesale price, %s per MWh, calendar quarters, %s to %s.
+",
+                              "NEM and Texas: real-time prices; California: day-ahead prices."),
                        cur_sym[[cur]], qtr_label(min(price_qtr$quarter)), qtr_label(price_q)),
     x = NULL, y = NULL,
     caption  = paste0("Sources: AEMO aggregated price and demand data (5-minute regional prices); ",
                       "CAISO OASIS (hourly day-ahead price, SP15 hub);\n",
                       if (has_ercot) "ERCOT (15-minute real-time price, hub average HB_HUBAVG); " else "",
                       "RBA daily A$/US$ exchange rates, averaged for each month to convert that month.\n",
-                      "Simple time-weighted averages of all intervals.",
+                      "Simple time-weighted averages of all intervals. ",
+                      if (nrow(others)) paste0("Not shown, ", qtr_label(price_q), ": ",
+                                               paste(sprintf("%s %s%.0f", others$region, cur_sym[[cur]], others$price),
+                                                     collapse = ", "), ".") else "",
                       if (has_ercot) "" else " Texas (ERCOT) not shown: no ERCOT data available on this run.")
   ) +
   theme_csis()
@@ -867,5 +884,31 @@ export_chart_csv(p7, "07_wholesale_prices_au_us.csv",
 
 write_csv(lcoe |> arrange(technology, country, year), "lcoe_au_us_tidy.csv")
 write_csv(price_qtr |> arrange(region, quarter), "wholesale_prices_au_us_tidy.csv")
+
+# Takeaways under each chart
+local({
+  en <- function(file) file.path("Energy", file)
+  coal <- gen_fy |> filter(region == "AUS") |> group_by(year) |>
+    summarise(coal = sum(gwh[grepl("coal", fuel, ignore.case = TRUE)]) / sum(gwh), .groups = "drop")
+  pk <- coal |> slice_max(coal, n = 1); lt <- coal |> slice_max(year, n = 1)
+  fy <- function(y) paste0(y, "-", sprintf("%02d", (y + 1) %% 100))
+  takeaway(en("01_fuel_mix_timeseries.png"), sprintf(
+    "Coal's share of Australian electricity fell from %.0f%% in %s to %.0f%% in %s.",
+    100 * pk$coal, fy(pk$year), 100 * lt$coal, fy(lt$year)))
+  takeaway(en("04_renewables_vs_target.png"), sprintf(
+    "Renewables supplied %.0f%% of Australian electricity in %s; reaching 82%% by 2030 needs about %.0f percentage points a year.",
+    100 * last_pt$share, fy(last_pt$year), 100 * (0.82 - last_pt$share) / (2030 - last_pt$year)))
+  rn <- gen_fy |> filter(region == "AUS", fuel %in% RENEWABLES, year == max(year)) |> arrange(desc(gwh))
+  takeaway(en("05_renewables_composition.png"), sprintf(
+    "%s was the largest renewable source in %s, at %.1f TWh.", rn$fuel[1], fy(max(gen_fy$year)), rn$gwh[1] / 1000))
+  l7 <- function(cur) {
+    p <- price_latest |> mutate(v = if (cur == "USD") price_usd else price_aud)
+    g <- function(r) p$v[p$region == r]
+    sprintf("In %s wholesale power averaged %s%.0f/MWh in NSW and %s%.0f in Victoria, against %s%.0f in Texas and %s%.0f in California.",
+            qtr_label(price_q), cur_sym[[cur]], g("NSW"), cur_sym[[cur]], g("VIC"),
+            cur_sym[[cur]], if (has_ercot) g("Texas (ERCOT)") else NA, cur_sym[[cur]], g("California (SP15)"))
+  }
+  takeaway(en("07_wholesale_prices_au_us.png"), l7("AUD"), l7("USD"))
+})
 
 message("Done - charts 6 and 7 written to ", getwd())
