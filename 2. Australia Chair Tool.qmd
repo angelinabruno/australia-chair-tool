@@ -73,6 +73,9 @@ pat_lines <- safely_num(readLines("Patents/us_applicants_count.csv", warn = FALS
 pat <- safely_num({
   rows <- grep("^[0-9]{4},[0-9]+$", pat_lines, value = TRUE)
   d <- read.csv(text = rows, header = FALSE, col.names = c("year", "n"))
+  # The chart runs to last year with recent years shaded as incomplete; the
+  # headline number uses the latest complete year (as in '1h. Patents.R').
+  d <- d[d$year <= as.integer(format(Sys.Date(), "%Y")) - 3L, ]
   d[which.max(d$year), ]
 })
 
@@ -236,11 +239,21 @@ cat(paste0(
 
 # Intellectual property {orientation="columns"}
 
-## Column {.tabset width="50%" title="US filings in Australia"}
+## Column {.tabset width="50%" title="US patents and trade marks in Australia"}
 
 ### Patents
 
 ![](Patents/us_applicants_count.png){title="Patents with a US applicant"}
+
+### Trade marks
+
+![](Patents/us_applicants_tm_count.png){title="Trade marks with a US applicant"}
+
+### Joint filings
+
+![](Patents/us_au_coapplied_trend.png){title="Joint US-Australian patent filings over time"}
+
+## Column {.tabset width="50%" title="More detail"}
 
 ### US share of patents
 
@@ -254,9 +267,13 @@ cat(paste0(
 
 ![](Patents/us_share_by_field.png){title="US share by field"}
 
-### Trade marks
+### Joint filings by field
 
-![](Patents/us_applicants_tm_count.png){title="Trade marks with a US applicant"}
+![](Patents/us_au_coapplied_fields.png){title="Joint filings by field"}
+
+### Joint filings by state
+
+![](Patents/us_au_coapplied_states.png){title="Joint filings by state"}
 
 ### US share of trade marks
 
@@ -266,25 +283,11 @@ cat(paste0(
 
 ![](Patents/tm_us_by_sector_trend.png){title="Trade marks by sector"}
 
-### Trade marks: US share by class
+### Trade marks by class
 
 ![](Patents/tm_us_share_by_class.png){title="US share of trade marks by class"}
 
-## Column {.tabset width="50%" title="Joint US-Australian filings"}
-
-### Joint filings over time
-
-![](Patents/us_au_coapplied_trend.png){title="Joint filings over time"}
-
-### Joint filings by field
-
-![](Patents/us_au_coapplied_fields.png){title="Joint filings by field"}
-
-### Joint filings by state
-
-![](Patents/us_au_coapplied_states.png){title="Joint filings by state"}
-
-### Joint trade marks over time
+### Joint trade marks
 
 ![](Patents/tm_us_au_coapplied_trend.png){title="Joint trade mark filings over time"}
 
@@ -295,6 +298,20 @@ cat(paste0(
 ### Joint trade marks by state
 
 ![](Patents/tm_us_au_coapplied_states.png){title="Joint trade mark filings by state"}
+
+### How to read this page
+
+<div class="dc-text">
+
+- **Patent application.** A request to IP Australia for a standard (complete) patent. Counted by the earliest filing date anywhere in the world.
+- **US applicant.** At least one applicant or owner on the application has a US address. This is ownership, not where the inventors live.
+- **Joint filing.** An application with both a US and an Australian applicant.
+- **Publication lag.** Filings made through the international (PCT) route can reach Australia 30 months or more after they were first filed, so the latest years are incomplete. They are shaded on the time-series charts.
+- **Trade mark classes.** The 45 Nice classes (1-34 goods, 35-45 services) that a trade mark is registered for.
+- **Madrid system.** The international route for trade marks: one application through WIPO that designates Australia.
+- **Sector and field.** WIPO's grouping of patent classification codes into 35 technology fields and five sectors.
+
+</div>
 
 # Trade overview {orientation="columns"}
 
@@ -330,9 +347,29 @@ cat(paste0(
 
 ![](Trade/abs_services_balance.png){title="Services trade balance"}
 
+### How to read this page
+
+<div class="dc-text">
+
+- **Exports and imports.** In the ABS balance of payments, exports of services are called *credits* and imports *debits*. This dashboard uses exports and imports throughout; chart file names still use the ABS terms.
+- **Goods and services.** Goods are physical products (beef, gold, aircraft). Services include travel, education, transport, finance and intellectual property charges.
+- **SITC.** The Standard International Trade Classification, the UN's product codes for goods. Three-digit codes (e.g. 971 non-monetary gold) are used on the Trade in goods page.
+- **n.i.e. and n.e.s.** "Not included elsewhere" and "not elsewhere specified": catch-all categories for items that do not fit a named code.
+- **Non-monetary gold.** Gold traded as a commodity (bullion), as opposed to gold held by central banks. Its value swings with gold prices and bullion flows, so the US balance is also shown without it.
+- **Trade balance.** Exports less imports. A US surplus with Australia means Australia buys more from the US than it sells there.
+- **Calendar years.** All trade figures here are calendar years (January to December).
+
+</div>
+
 # Trade in goods
 
-## Column
+## Column {.tabset}
+
+### Top ten products
+
+![](Trade/goods_top10_us.png){title="Top ten goods traded with the United States"}
+
+### All products
 
 ```{r}
 #| title: "Goods trade by product with the US"
@@ -515,8 +552,8 @@ if (length(svc_files) == 0) {
     "</style>",
     "<div class=\"svc-toolbar\">",
     "<div class=\"svc-toggle\" role=\"group\" aria-label=\"Direction of trade\">",
-    "<button type=\"button\" data-flow=\"credits\" class=\"is-on\" aria-pressed=\"true\">Exports (credits)</button>",
-    "<button type=\"button\" data-flow=\"debits\" aria-pressed=\"false\">Imports (debits)</button>",
+    "<button type=\"button\" data-flow=\"credits\" class=\"is-on\" aria-pressed=\"true\">Exports</button>",
+    "<button type=\"button\" data-flow=\"debits\" aria-pressed=\"false\">Imports</button>",
     "</div>",
     "<select class=\"svc-select\" aria-label=\"Type of service\">", opts, "</select>",
     "</div>",
@@ -548,9 +585,15 @@ if (length(svc_files) == 0) {
 
 # Foreign investment
 
-## Row
+## Row {.tabset}
+
+### By partner
 
 ![](<Investment/iip_levels_latest.png>){title="International investment position"}
+
+### By type of investment
+
+![](<Investment/iip_by_type_latest.png>){title="Two-way investment by type: direct, portfolio and other"}
 
 # Critical minerals
 

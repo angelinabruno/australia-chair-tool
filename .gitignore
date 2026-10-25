@@ -67,6 +67,7 @@ Critical minerals/**
 !Trade/us_au_trade_balance.png
 !Trade/goods_exports_*.png
 !Trade/goods_imports_*.png
+!Trade/goods_top10_us.png
 !Trade/credits_*.png
 !Trade/debits_*.png
 !Data centres/01_divj_by_asset.png
