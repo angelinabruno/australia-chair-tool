@@ -214,13 +214,25 @@ cat(paste0(
 
 ![](<Economy/gdp_au_us.png>){title="Real GDP, Australia and the United States"}
 
-### Productivity
+### GDP per person
 
-![](<Economy/productivity_au_us.png>){title="Productivity, AU vs US"}
+![](<Economy/gdp_per_capita_au_us.png>){title="Real GDP per person, Australia and the United States"}
+
+### Productivity growth
+
+![](<Economy/productivity_au_us.png>){title="Labour productivity growth, Australia and the United States"}
+
+### Productivity level
+
+![](<Economy/productivity_level_au_us.png>){title="GDP per hour worked, Australia and the United States"}
 
 ### Industry composition
 
 ![](Economy/gva_level_industry.png){title="Industry composition"}
+
+### Industries vs US
+
+![](Economy/gva_share_au_us.png){title="Industry shares of the economy, Australia and the United States"}
 
 # Intellectual property {orientation="columns"}
 
