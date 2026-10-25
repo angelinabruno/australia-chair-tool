@@ -736,44 +736,59 @@ p13 <- ggplot(tg, aes(label, value, fill = fill)) +
 save_csis(p13, "13_transgrid_sydney_capacity.png", height = 5)
 
 # 13e. Buildings: value of work done and approvals, Commercial buildings n.e.c.
-# 8752.0 (quarterly) and 8731.0 (monthly, summed to quarters), private sector,
-# current prices, original.
+# 8752.0 work done is quarterly (rolling four-quarter sum); 8731.0 approvals
+# are monthly and jump around with single large projects, so they are shown
+# as a trailing 12-month moving average with the monthly values faint behind.
+# The two are on different time bases, so each has its own panel.
+# Private sector, current prices, original.
+roll12 <- function(x) as.numeric(stats::filter(x, rep(1 / 12, 12), sides = 1))   # trailing mean
+
 bld_ids <- c(done = "A751834F", approved = "A119227564K")
 bld <- read_abs(series_id = unname(bld_ids)) |>
   transmute(series_id, date = as.Date(date), value = value / 1000) |>   # $'000 -> $ million
-  mutate(measure = names(bld_ids)[match(series_id, bld_ids)], qtr = to_qtr(date)) |>
-  group_by(measure, qtr) |>
-  summarise(value = sum(value), n = n(), .groups = "drop") |>
-  filter(measure == "done" | n == 3) |>       # complete quarters of monthly approvals
-  arrange(measure, qtr) |>
-  filter(qtr >= as.Date("2009-01-01"))
-bld_lbl <- c(done = "Value of work done", approved = "Value of building approved")
+  mutate(measure = names(bld_ids)[match(series_id, bld_ids)]) |>
+  arrange(measure, date) |>
+  filter(date >= as.Date("2008-01-01"))
 bld_for <- function(cur) bld |>
-  mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(qtr)) else value) |>
-  group_by(measure) |> mutate(roll4 = roll4(value)) |> ungroup() |>
-  filter(qtr >= as.Date("2010-01-01"))
+  mutate(value = if (cur == "USD")
+                   value * fx_or_latest(if_else(measure == "done", fx_quarter(date), fx_month(date)))
+                 else value) |>
+  group_by(measure) |>
+  mutate(smooth = if (first(measure) == "done") roll4(value) else roll12(value)) |>
+  ungroup() |>
+  filter(date >= as.Date("2010-01-01"))
+bld_lbl <- c(approved = "Value of building approved, per month (12-month moving average)",
+             done     = "Value of work done, per year (rolling four-quarter sum)")
 make_p14 <- function(cur) {
-  d <- bld_for(cur) |> mutate(measure = factor(bld_lbl[measure], levels = bld_lbl))
-  ggplot(d, aes(qtr, roll4 / 1000, colour = measure)) +
-    geom_line(linewidth = 0.9) +
-    scale_colour_manual(values = setNames(c(csis_colours[["navy"]], csis_colours[["teal"]]), bld_lbl)) +
-    scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 1),
+  d <- bld_for(cur) |> mutate(panel = factor(bld_lbl[measure], levels = bld_lbl))
+  ggplot(d, aes(date)) +
+    geom_line(data = filter(d, measure == "approved"), aes(y = value / 1000),
+              colour = csis_colours[["teal"]], alpha = 0.25, linewidth = 0.4) +
+    geom_line(aes(y = smooth / 1000, colour = measure), linewidth = 0.9) +
+    facet_wrap(~panel, ncol = 1, scales = "free_y") +
+    scale_colour_manual(values = c(approved = csis_colours[["teal"]], done = csis_colours[["navy"]]),
+                        guide = "none") +
+    scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 0.5),
                        expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
     scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
     labs(title = "Building work on commercial buildings not elsewhere classified",
-         subtitle = paste("Private sector, rolling four-quarter sum. The ABS includes data centres in this category,",
-                          "\nalongside other commercial buildings it does not list separately"),
+         subtitle = paste("Private sector. Approvals: 12-month moving average, monthly values faint. The ABS includes",
+                          "\ndata centres in this category, alongside other commercial buildings it does not list separately"),
          x = NULL, y = NULL,
          caption = paste("Sources: ABS, Building Activity, Australia (cat. 8752.0), Table 51;",
                          "ABS, Building Approvals, Australia (cat. 8731.0), Table 51.\nCurrent prices, original.",
-                         if (cur == "USD") fx_note[["USD"]] else ""))
+                         if (cur == "USD") fx_note[["USD"]] else "")) +
+    theme(strip.text = element_text(face = "bold", hjust = 0, colour = csis_colours[["navy"]]))
 }
-save_both(make_p14, "14_commercial_nec_building.png", save_csis, height = 5)
+save_both(make_p14, "14_commercial_nec_building.png", save_csis, height = 6)
 
 # 13f. Computers and parts imported (SITC 752 + 759), next to IMT equipment capex
-# ABS Data API, merchandise imports by SITC and country of origin, monthly, A$ thousand.
+# ABS Data API, merchandise imports by SITC and country of origin, monthly,
+# A$ thousand. Monthly imports are shown as a trailing 12-month moving
+# average (monthly values faint); IMT capex is quarterly (rolling four-quarter
+# sum), so it has its own panel.
 imp_url <- paste0("https://data.api.abs.gov.au/rest/data/ABS,MERCH_IMP,1.0.0/",
-                  "752+759.TOT+USA.TOT.M?startPeriod=2010-01")
+                  "752+759.TOT+USA.TOT.M?startPeriod=2009-01")
 imp_file <- file.path("raw", "abs_merch_imp_752_759.csv")
 dir.create("raw", showWarnings = FALSE)
 if (!file.exists(imp_file) || difftime(Sys.time(), file.mtime(imp_file), units = "days") > 7)
@@ -782,36 +797,46 @@ if (!file.exists(imp_file) || difftime(Sys.time(), file.mtime(imp_file), units =
 imp <- utils::read.csv(imp_file) |>
   transmute(origin = COUNTRY_ORIGIN, date = as.Date(paste0(TIME_PERIOD, "-01")),
             value = OBS_VALUE / 1000) |>                            # A$ million
-  mutate(qtr = to_qtr(date)) |>
-  group_by(origin, qtr) |>
-  summarise(value = sum(value), n = n_distinct(date), .groups = "drop") |>
-  filter(n == 3) |> select(-n)
+  group_by(origin, date) |>
+  summarise(value = sum(value), .groups = "drop") |>                # 752 + 759
+  arrange(origin, date)
 imt_epm <- cp |>
-  filter(measure == "Actual", industry == IMT, asset == EPM, date >= as.Date("2010-01-01")) |>
-  transmute(origin = "IMT", qtr = date, value)
-imp_lbl <- c(TOT = "Imports of computers and parts, all countries",
-             USA = "Imports of computers and parts from the US",
-             IMT = "Information Media & Telecommunications equipment capex")
+  filter(measure == "Actual", industry == IMT, asset == EPM, date >= as.Date("2009-01-01")) |>
+  transmute(date, value)
+imp_lbl <- c(TOT = "All countries", USA = "From the US")
+imp_for <- function(cur) imp |>
+  mutate(value = if (cur == "USD") value * fx_or_latest(fx_month(date)) else value) |>
+  group_by(origin) |> mutate(smooth = roll12(value)) |> ungroup() |>
+  filter(date >= as.Date("2010-01-01"))
 make_p15 <- function(cur) {
-  d <- bind_rows(imp, imt_epm) |>
-    mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(qtr)) else value,
-           series = factor(imp_lbl[origin], levels = imp_lbl))
-  ggplot(d, aes(qtr, value / 1000, colour = series)) +
-    geom_line(linewidth = 0.8) +
-    scale_colour_manual(values = setNames(c(csis_colours[["navy"]], csis_colours[["red"]],
-                                            csis_colours[["gold"]]), imp_lbl)) +
-    scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 1),
+  p_imp <- "Imports of computers and parts, per month (12-month moving average)"
+  p_cap <- "Information Media & Telecommunications equipment capex, per year (rolling four-quarter sum)"
+  d_imp <- imp_for(cur) |> mutate(series = imp_lbl[origin], panel = p_imp)
+  d_cap <- imt_epm |>
+    mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(date)) else value,
+           smooth = roll4(value), series = "IMT equipment capex", panel = p_cap) |>
+    filter(date >= as.Date("2010-01-01"))
+  d <- bind_rows(d_imp, d_cap) |> mutate(panel = factor(panel, levels = c(p_imp, p_cap)))
+  ggplot(d, aes(date)) +
+    geom_line(data = filter(d, panel == p_imp), aes(y = value / 1000, group = series, colour = series),
+              alpha = 0.25, linewidth = 0.4, show.legend = FALSE) +
+    geom_line(aes(y = smooth / 1000, colour = series), linewidth = 0.9) +
+    facet_wrap(~panel, ncol = 1, scales = "free_y") +
+    scale_colour_manual(values = c(`All countries` = csis_colours[["navy"]],
+                                   `From the US` = csis_colours[["red"]],
+                                   `IMT equipment capex` = csis_colours[["gold"]])) +
+    scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 0.5),
                        expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
     scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
-    guides(colour = guide_legend(ncol = 1)) +
     labs(title = "Imports of computers and parts, and equipment spending by the industry",
-         subtitle = "Quarterly, current prices",
+         subtitle = "Current prices. Imports: 12-month moving average, monthly values faint",
          x = NULL, y = NULL,
          caption = paste("Sources: ABS, merchandise imports by SITC and country of origin (ABS Data API),",
                          "SITC 752 (computers) and 759 (parts);\nABS 5625.0 for capex.",
-                         GAPS, if (cur == "USD") fx_note[["USD"]] else ""))
+                         GAPS, if (cur == "USD") fx_note[["USD"]] else "")) +
+    theme(strip.text = element_text(face = "bold", hjust = 0, colour = csis_colours[["navy"]]))
 }
-save_both(make_p15, "15_computer_imports.png", save_csis, height = 5.5)
+save_both(make_p15, "15_computer_imports.png", save_csis, height = 6.5)
 
 # 13g. Cost to run: industrial electricity prices in US data centre states
 eia <- ref_get("eia_industrial_price")
@@ -858,21 +883,26 @@ local({
     "Transgrid has more than %s GW of data centre enquiries in Sydney, has signed about %s GW and says up to %s GW more is possible only if data centres pay for the upgrades.",
     tg$value[1], tg$value[2], tg$value[3]))
   line14 <- function(cur) {
-    b <- bld_for(cur) |> filter(measure == "done", !is.na(roll4)) |> arrange(qtr)
-    bl <- b[nrow(b), ]; bp <- b[nrow(b) - 4, ]
-    sprintf("Work done on these buildings was %s in the year to %s, %.0f%% more than a year earlier.",
-            fmt_bn(bl$roll4 / 1000, cur_sym[[cur]]), format(bl$qtr, "%B %Y"), 100 * (bl$roll4 / bp$roll4 - 1))
+    a <- bld_for(cur) |> filter(measure == "approved", !is.na(smooth)) |> arrange(date)
+    al <- a[nrow(a), ]; ap <- a[nrow(a) - 12, ]
+    w <- bld_for(cur) |> filter(measure == "done", !is.na(smooth)) |> arrange(date)
+    wl <- w[nrow(w), ]
+    sprintf(paste("Approvals averaged %s a month in the 12 months to %s, %.0f%% more than a year earlier;",
+                  "work done was %s in the year to %s."),
+            fmt_bn(al$smooth / 1000, cur_sym[[cur]], 2), format(al$date, "%B %Y"),
+            100 * (al$smooth / ap$smooth - 1),
+            fmt_bn(wl$smooth / 1000, cur_sym[[cur]]), format(wl$date, "%B %Y"))
   }
   takeaway(dc("14_commercial_nec_building.png"), line14("AUD"), line14("USD"))
   line15 <- function(cur) {
-    it <- imp |> mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(qtr)) else value) |>
-      group_by(origin) |> arrange(qtr) |> mutate(r4 = roll4(value)) |> ungroup()
-    tot <- it |> filter(origin == "TOT") |> arrange(qtr)
-    il <- tot[nrow(tot), ]; ip <- tot[nrow(tot) - 4, ]
-    us <- it |> filter(origin == "USA", qtr == il$qtr)
-    sprintf("Australia imported %s of computers and parts in the year to %s, up %.0f%%; %.0f%% came from the US.",
-            fmt_bn(il$r4 / 1000, cur_sym[[cur]]), format(il$qtr, "%B %Y"), 100 * (il$r4 / ip$r4 - 1),
-            100 * us$r4 / il$r4)
+    it <- imp_for(cur) |> filter(!is.na(smooth))
+    tot <- it |> filter(origin == "TOT") |> arrange(date)
+    il <- tot[nrow(tot), ]; ip <- tot[nrow(tot) - 12, ]
+    us <- it |> filter(origin == "USA", date == il$date)
+    sprintf(paste("Imports of computers and parts averaged %s a month in the 12 months to %s, %.0f%% more",
+                  "than a year earlier; %.0f%% came from the US."),
+            fmt_bn(il$smooth / 1000, cur_sym[[cur]], 2), format(il$date, "%B %Y"),
+            100 * (il$smooth / ip$smooth - 1), 100 * us$smooth / il$smooth)
   }
   takeaway(dc("15_computer_imports.png"), line15("AUD"), line15("USD"))
   line16 <- function(cur) sprintf(
