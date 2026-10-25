@@ -4,6 +4,7 @@ rm(list = ls())
 if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Patents"))
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
 
 # ==============================================================================
 # IP RAPID (IP Australia) — patent applications joined to party activity
@@ -407,7 +408,21 @@ stopifnot(all(c("party_role_category", "country_code") %in% names(patents_full))
 # filing can enter the data up to 12 months (Paris) or 30+ months (PCT national
 # phase) after its earliest filing, so the tail is heavily truncated.
 year_min <- 1990L
-year_max <- year(Sys.Date()) - 3L
+year_max <- year(Sys.Date()) - 3L          # last filing year treated as complete
+# The time-series charts run to last year but shade the years after year_max,
+# so readers see the latest filings without mistaking the lag for a fall.
+ts_year_max <- year(Sys.Date()) - 1L
+
+shade_incomplete <- function(from = year_max + 1L, to = ts_year_max) list(
+  annotate("rect", xmin = from - 0.5, xmax = to + 0.5, ymin = -Inf, ymax = Inf,
+           fill = "grey88", alpha = 0.6),
+  annotate("text", x = (from + to) / 2, y = Inf, vjust = 1.4, size = 3,
+           colour = "grey35", lineheight = 0.9,
+           label = "Incomplete:
+publication lag")
+)
+LAG_NOTE <- paste0("Shaded years are incomplete: Australian filings can enter the data up to 30 months or more ",
+                   "after the earliest filing (PCT national phase).")
 
 # One row per patent: was any applicant/patentee party recorded in the US?
 # Dictionary Table 3/11: party_role_category "applicant" covers party_role
@@ -422,7 +437,7 @@ patent_flags <- patents_full[
 ]
 
 annual_us <- patent_flags[
-  filing_year %between% c(year_min, year_max),
+  filing_year %between% c(year_min, ts_year_max),
   .(n_us       = sum(us_applicant),
     n_total    = .N,
     n_known    = sum(any_applicant)),
@@ -436,6 +451,7 @@ cat("\n--- US-applicant patents ---\n")
 print(tail(annual_us, 15))
 
 p_count <- ggplot(annual_us, aes(filing_year, n_us)) +
+  shade_incomplete() +
   geom_line(linewidth = 0.8, colour = "#1f4e79") +
   geom_point(size = 1.4, colour = "#1f4e79") +
   scale_x_continuous(breaks = scales::pretty_breaks(8)) +
@@ -444,13 +460,15 @@ p_count <- ggplot(annual_us, aes(filing_year, n_us)) +
     title    = "Australian patent applications with a US applicant",
     subtitle = paste0("Standard complete applications, by earliest filing date"),
     x = NULL, y = "Applications",
-    caption  = "Source: IP Australia, IP RAPID"
+    caption  = paste0("Source: IP Australia, IP RAPID.
+", LAG_NOTE)
   ) +
   theme_minimal(base_size = 12) +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(face = "bold"))
 
 p_share <- ggplot(annual_us, aes(filing_year, share_us)) +
+  shade_incomplete() +
   geom_line(linewidth = 0.8, colour = "#a33") +
   geom_point(size = 1.4, colour = "#a33") +
   scale_x_continuous(breaks = scales::pretty_breaks(8)) +
@@ -459,7 +477,8 @@ p_share <- ggplot(annual_us, aes(filing_year, share_us)) +
   labs(title = "US share of Australian patent applications",
        subtitle = "Share of applications with a known applicant party",
        x = NULL, y = NULL,
-       caption = "Source: IP Australia, IP RAPID") +
+       caption = paste0("Source: IP Australia, IP RAPID.
+", LAG_NOTE)) +
   theme_minimal(base_size = 12) +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(face = "bold"))
@@ -963,7 +982,7 @@ pat_level <- merge(pat_level,
 pat_level[, known := !is.na(us)]
 pat_level[is.na(us), `:=`(us = FALSE, au = FALSE)]
 pat_level[, us_au := us & au]
-pat_level <- pat_level[filing_year %between% c(year_min, year_max)]
+pat_level <- pat_level[filing_year %between% c(year_min, ts_year_max)]   # pooled charts use recent_years
 
 cat("\nUS-AU co-applied patents, all years: ", pat_level[us_au == TRUE, .N], "\n", sep = "")
 
@@ -1023,6 +1042,7 @@ sector_pal <- setNames(rep_len(c("#1f4e79", "#a33", "#2a9d8f", "#e9a23b", "#6c75
                                length(sectors)), sectors)
 
 p_sector_trend <- ggplot(sector_trend, aes(filing_year, n_us, colour = sector)) +
+  shade_incomplete() +
   geom_line(linewidth = 0.8) +
   geom_point(size = 1.2) +
   scale_colour_manual(values = sector_pal) +
@@ -1031,7 +1051,8 @@ p_sector_trend <- ggplot(sector_trend, aes(filing_year, n_us, colour = sector)) 
   labs(title    = "Australian patent applications with a US applicant, by technology sector",
        subtitle = "Standard complete applications; each application split across its sectors",
        x = NULL, y = "Applications", colour = NULL,
-       caption  = "Source: IP Australia, IP RAPID. Sectors: WIPO technology concordance.") +
+       caption  = paste0("Source: IP Australia, IP RAPID. Sectors: WIPO technology concordance.
+", LAG_NOTE)) +
   theme_chart() +
   theme(legend.position = "top")
 
@@ -1047,6 +1068,7 @@ fwrite(collab_annual, file.path(out_dir, "us_au_coapplied_annual_full.csv"))
 
 # Chart 3: co-applied patents per year
 p_collab_trend <- ggplot(collab_annual, aes(filing_year, n_us_au)) +
+  shade_incomplete() +
   geom_line(linewidth = 0.8, colour = "#2a9d8f") +
   geom_point(size = 1.4, colour = "#2a9d8f") +
   scale_x_continuous(breaks = scales::pretty_breaks(8)) +
@@ -1054,7 +1076,8 @@ p_collab_trend <- ggplot(collab_annual, aes(filing_year, n_us_au)) +
   labs(title    = "Patent applications with both US and Australian applicants",
        subtitle = "Standard complete applications filed in Australia",
        x = NULL, y = "Applications",
-       caption  = "Source: IP Australia, IP RAPID") +
+       caption  = paste0("Source: IP Australia, IP RAPID.
+", LAG_NOTE)) +
   theme_chart()
 
 # Chart 4: co-applied patents by technology field (recent window, top 15)
@@ -1525,3 +1548,39 @@ export_chart_csv(p_tm_collab_classes, "tm_us_au_coapplied_classes.csv", y_format
 export_chart_csv(p_tm_collab_states, "tm_us_au_coapplied_states.csv", y_format = "number",
                  chart_type = "Horizontal bar",
                  notes = "State of the Australian co-applicant. Applications with partners in two states count in both.")
+
+
+# ------------------------------------------------------------------------------
+# 11. Takeaways under each chart (complete years only)
+# ------------------------------------------------------------------------------
+local({
+  pt <- function(file) file.path("Patents", file)
+  a  <- annual_us[filing_year <= year_max][order(filing_year)]
+  al <- a[.N]; a10 <- a[filing_year == al$filing_year - 10L]
+  takeaway(pt("us_applicants_count.png"), sprintf(
+    "%s Australian patent applications filed in %d had a US applicant%s.",
+    format(al$n_us, big.mark = ","), al$filing_year,
+    if (nrow(a10)) sprintf(", against %s in %d", format(a10$n_us, big.mark = ","), a10$filing_year) else ""))
+  takeaway(pt("us_applicants_share.png"), sprintf(
+    "US applicants accounted for %.0f%% of Australian patent applications filed in %d.",
+    100 * al$share_us, al$filing_year))
+  st <- sector_trend[filing_year == year_max][order(-n_us)]
+  if (nrow(st)) takeaway(pt("us_by_sector_trend.png"), sprintf(
+    "%s was the largest sector for US-applicant patents in %d (%s applications).",
+    st$sector[1], year_max, format(round(st$n_us[1]), big.mark = ",")))
+  top_f <- ft[n_all >= min_field_n][order(-share_us)][1]
+  takeaway(pt("us_share_by_field.png"), sprintf(
+    "US applicants filed %.0f%% of Australian patent applications in %s, the highest share of any field (%d-%d).",
+    100 * top_f$share_us, tolower(sub("^[0-9]+ +", "", top_f$field)), min(recent_years), max(recent_years)))
+  ca <- collab_annual[filing_year <= year_max][order(filing_year)][.N]
+  takeaway(pt("us_au_coapplied_trend.png"), sprintf(
+    "%d patent applications filed in %d had both US and Australian applicants, %.1f%% of those with a US applicant.",
+    ca$n_us_au, ca$filing_year, 100 * ca$share_of_us_with_au))
+  t <- tm_annual_us[order(filing_year)][.N]
+  takeaway(pt("us_applicants_tm_count.png"), sprintf(
+    "%s trade mark applications filed in Australia in %d had a US applicant.",
+    format(t$n_us, big.mark = ","), t$filing_year))
+  takeaway(pt("us_applicants_tm_share.png"), sprintf(
+    "US applicants accounted for %.0f%% of Australian trade mark applications in %d; %.0f%% of them came through the Madrid system.",
+    100 * t$share_us, t$filing_year, 100 * t$share_us_via_madrid))
+})
