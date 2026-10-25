@@ -5,6 +5,7 @@ if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Investment"))
 source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
 # ==============================================================================
 # Foreign investment.R  -  two-way investment between Australia and its partners
 #
@@ -325,5 +326,122 @@ Converted to US$ at the RBA exchange rate on 31 December." else ""),
 
 save_both(make_iip, file.path(OUT_DIR, "iip_levels_latest.png"),
           function(p, f) ggsave(f, p, width = 9, height = 5.5, dpi = 300, bg = "white"))
+
+
+
+# ------------------------------------------------------------------------------
+# 4. By type of investment: direct, portfolio and other
+# ------------------------------------------------------------------------------
+# Direct investment (a lasting interest, 10% or more of voting power) behaves
+# very differently from portfolio holdings of shares and bonds, so the total
+# above is split by type. Same Tables 2 and 5: country names in the first
+# column, types of investment in the second, one column per year.
+# Other = financial derivatives, other investment (loans, deposits, trade
+# credit) and, for assets, reserve assets.
+
+read_by_type <- function(path) {
+  g <- as.matrix(suppressMessages(read_excel(path, sheet = 2, col_names = FALSE,
+                                             col_types = "text", .name_repair = "minimal")))
+  yr_row <- which.max(rowSums(!is.na(matrix(cell_year(as.vector(g)), nrow = nrow(g)))))
+  yrs    <- cell_year(g[yr_row, ])
+  col    <- which(yrs == max(yrs, na.rm = TRUE))[1]
+  country <- fill_forward(ifelse(is.na(g[, 1]) | trimws(g[, 1]) == "", NA, trimws(g[, 1])))
+  data.frame(country = country, type = trimws(g[, 2]), value_m = abs(cell_num(g[, col])),
+             year = max(yrs, na.rm = TRUE)) |>
+    filter(!is.na(type))
+}
+
+type_group <- function(type) dplyr::case_when(
+  grepl("^Direct investment( in Australia| abroad)?$", type)         ~ "Direct",
+  grepl("^Portfolio investment (liabilities|assets)$", type)         ~ "Portfolio",
+  grepl("^(Financial derivative|Other investment) (liabilities|assets)$|^Reserve assets$", type) ~ "Other",
+  TRUE ~ NA_character_)
+
+by_type <- bind_rows(
+  read_by_type(tab_paths[["foreign"]]) |> mutate(direction = "Foreign investment in Australia"),
+  read_by_type(tab_paths[["abroad"]])  |> mutate(direction = "Australian investment abroad")
+) |>
+  mutate(group = type_group(type)) |>
+  filter(!is.na(group))
+by_type$partner <- NA_character_
+for (p in names(PARTNERS)) by_type$partner[grepl(PARTNERS[[p]], by_type$country, perl = TRUE)] <- p
+by_type <- by_type |>
+  filter(!is.na(partner)) |>
+  group_by(direction, partner, group, year) |>
+  summarise(value_bn = sum(value_m, na.rm = TRUE) / 1000,
+            np = any(is.na(value_m)), .groups = "drop") |>
+  mutate(usd_per_aud = fx_on(as.Date(paste0(year, "-12-31"))))
+stopifnot("Types of investment not found in Tables 2 and 5" = nrow(by_type) > 0)
+write.csv(by_type, file.path(OUT_DIR, "iip_by_type_latest.csv"), row.names = FALSE)
+
+make_iip_type <- function(cur) {
+  d <- by_type |>
+    mutate(value_bn = if (cur == "USD") value_bn * usd_per_aud else value_bn,
+           partner  = factor(partner, levels = partner_order),
+           group    = factor(group, levels = c("Other", "Portfolio", "Direct")),
+           direction = factor(direction, levels = c("Foreign investment in Australia",
+                                                    "Australian investment abroad")))
+  ggplot(d, aes(value_bn, partner, fill = group)) +
+    geom_col(width = 0.7) +
+    facet_wrap(~direction, ncol = 2) +
+    scale_fill_manual(values = c(Direct = csis_navy, Portfolio = csis_teal, Other = "#B1B3B3"),
+                      breaks = c("Direct", "Portfolio", "Other")) +
+    scale_x_continuous(labels = dollar_format(prefix = cur_sym[[cur]], suffix = "bn", big.mark = ","),
+                       breaks = scales::breaks_pretty(n = 3),
+                       expand = expansion(mult = c(0, 0.05))) +
+    labs(
+      title    = sprintf("Two-way investment by type, %d", YEAR),
+      subtitle = sprintf("Level of investment at 31 December %d, %s billion", YEAR, cur_sym[[cur]]),
+      caption  = paste0("Source: ABS, International Investment Position, Australia: Supplementary Statistics, Tables 2 and 5.",
+                        "\nDirect = a lasting interest (10% or more of voting power). Portfolio = shares and bonds.",
+                        " Other = loans, deposits, trade credit, derivatives and reserves.",
+                        if (any(by_type$np)) "\nSome partner-type values are not published by the ABS and are left out." else "",
+                        if (cur == "USD") "\nConverted to US$ at the RBA exchange rate on 31 December." else ""),
+      x = NULL, y = NULL, fill = NULL
+    ) +
+    theme_minimal(base_size = 12, base_family = font_family) +
+    theme(
+      plot.title         = element_text(face = "bold", colour = csis_navy, size = rel(1.2)),
+      plot.subtitle      = element_text(colour = csis_grey, margin = margin(b = 8)),
+      plot.caption       = element_text(colour = csis_grey, hjust = 0, size = rel(0.75)),
+      plot.title.position   = "plot",
+      plot.caption.position = "plot",
+      legend.position    = "top",
+      legend.justification = "left",
+      strip.text         = element_text(face = "bold", colour = csis_navy, hjust = 0),
+      panel.spacing.x    = unit(2.5, "lines"),
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor   = element_blank(),
+      axis.text          = element_text(colour = csis_grey),
+      plot.margin        = margin(10, 25, 10, 10)
+    )
+}
+
+save_both(make_iip_type, file.path(OUT_DIR, "iip_by_type_latest.png"),
+          function(p, f) ggsave(f, p, width = 10, height = 5.5, dpi = 300, bg = "white"))
+
+# ------------------------------------------------------------------------------
+# 5. Takeaways under each chart
+# ------------------------------------------------------------------------------
+local({
+  inv <- iip |> filter(direction == "Foreign investment in Australia") |> arrange(desc(value_bn))
+  out <- iip |> filter(direction == "Australian investment abroad") |> arrange(desc(value_bn))
+  line <- function(cur) {
+    k <- if (cur == "USD") inv$usd_per_aud[1] else 1
+    us_in  <- inv$value_bn[inv$partner == "United States"] * k
+    us_out <- out$value_bn[out$partner == "United States"] * k
+    sprintf("US investors held %s in Australia at the end of %d, %s; Australians held %s in the US.",
+            fmt_bn(us_in, cur_sym[[cur]]), YEAR,
+            if (inv$partner[1] == "United States") "more than any other country" else
+              paste0("second to ", inv$partner[1]),
+            fmt_bn(us_out, cur_sym[[cur]]))
+  }
+  takeaway("Investment/iip_levels_latest.png", line("AUD"), line("USD"))
+  us_t <- by_type |> filter(partner == "United States")
+  sh <- function(dir) { x <- us_t |> filter(direction == dir); 100 * sum(x$value_bn[x$group == "Direct"]) / sum(x$value_bn) }
+  takeaway("Investment/iip_by_type_latest.png", sprintf(
+    "Direct investment is %.0f%% of US investment in Australia and %.0f%% of Australian investment in the US; the rest is mostly portfolio holdings.",
+    sh("Foreign investment in Australia"), sh("Australian investment abroad")))
+})
 
 message("Saved ", file.path(OUT_DIR, "iip_levels_latest.png"))
