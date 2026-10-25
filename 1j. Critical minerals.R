@@ -400,4 +400,20 @@ write_csv(minerals |>
                       world_total_note = world_note),
           "minerals_au_us_tidy.csv")
 
+# Takeaways under each chart
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))
+local({
+  m <- read.csv("minerals_au_us_tidy.csv", stringsAsFactors = FALSE)
+  first <- tolower(m$mineral[m$au_world_rank %in% 1])
+  takeaway("Critical minerals/minerals_au_world_share_us_reliance.png", sprintf(
+    "Australia is the world's largest producer of %s, and among the top three for %d of the %d minerals shown.",
+    paste(if (length(first) > 2) c(paste(first[-length(first)], collapse = ", "), first[length(first)]) else first,
+          collapse = " and "), sum(m$au_world_rank <= 3, na.rm = TRUE), nrow(m)))
+  r <- m[!is.na(m$au_share_world_reserves_pct), ]
+  r <- r[order(-(r$au_share_world_reserves_pct - r$au_share_world_production_pct)), ][1, ]
+  takeaway("Critical minerals/minerals_au_reserves_vs_production.png", sprintf(
+    "Australia holds %.0f%% of known world reserves of %s but produces %.0f%% of world output.",
+    r$au_share_world_reserves_pct, tolower(r$mineral), r$au_share_world_production_pct))
+})
+
 message("Done - two charts and one tidy CSV written to ", getwd())

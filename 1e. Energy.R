@@ -536,7 +536,7 @@ stopifnot(nrow(lcoe) > 40, n_distinct(lcoe$country) == 2)
 lcoe_latest <- lcoe |> group_by(technology, country) |> slice_max(year, n = 1) |> ungroup()
 lcoe_yr     <- max(lcoe_latest$year)
 
-au_us_cols <- c("Australia" = "#eda100", "United States" = "#00205B")
+au_us_cols <- c("Australia" = "#00205B", "United States" = "#D2232A")   # as on every page
 
 # From 2015: the 2010-12 solar costs (up to $490/MWh) would flatten the recent comparison.
 lcoe_plot <- lcoe |> filter(year >= 2015)
@@ -909,6 +909,22 @@ local({
             cur_sym[[cur]], if (has_ercot) g("Texas (ERCOT)") else NA, cur_sym[[cur]], g("California (SP15)"))
   }
   takeaway(en("07_wholesale_prices_au_us.png"), l7("AUD"), l7("USD"))
+  st <- state_shares |> distinct(region, renew) |> arrange(desc(renew))
+  takeaway(en("02_state_fuel_mix.png"), sprintf(
+    "Renewables supplied %.0f%% of electricity in %s in 2025 but %.0f%% in %s.",
+    100 * st$renew[1], st$region[1], 100 * st$renew[nrow(st)], st$region[nrow(st)]))
+  oil <- comparison |> filter(fuel == "Oil")
+  takeaway(en("03_primary_vs_electricity.png"), sprintf(
+    "Oil is %.0f%% of Australia's primary energy supply but %.0f%% of its electricity; most of it fuels transport.",
+    100 * oil$share[grepl("primary", oil$basis)], 100 * sum(oil$share[grepl("Electricity", oil$basis)])))
+  l6 <- function(cur) {
+    k <- if (cur == "AUD") 1 / lcoe_rate else 1
+    v <- function(t, c) lcoe_latest$lcoe[lcoe_latest$technology == t & lcoe_latest$country == c] * k
+    sprintf("New utility-scale solar cost %s%.0f/MWh in Australia and %s%.0f in the US in %d; onshore wind %s%.0f and %s%.0f.",
+            cur_sym[[cur]], v("Utility-scale solar PV", "Australia"), cur_sym[[cur]], v("Utility-scale solar PV", "United States"),
+            lcoe_yr, cur_sym[[cur]], v("Onshore wind", "Australia"), cur_sym[[cur]], v("Onshore wind", "United States"))
+  }
+  takeaway(en("06_lcoe_au_us.png"), l6("AUD"), l6("USD"))
 })
 
 message("Done - charts 6 and 7 written to ", getwd())

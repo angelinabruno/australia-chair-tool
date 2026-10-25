@@ -736,6 +736,20 @@ map
 
 ![](Energy/07_wholesale_prices_au_us.png){title="Wholesale electricity prices, Australia and US markets"}
 
+### How to read this page
+
+<div class="dc-text">
+
+- **Primary energy.** All energy used before it is converted: coal, oil, gas and renewables, including fuel burnt in cars and factories. Electricity is only part of it.
+- **Generation mix.** The share of electricity produced from each fuel. Rooftop solar is counted even though it is not sold through the grid.
+- **LCOE.** Levelised cost of electricity: the lifetime cost of building and running a new plant, divided by the electricity it produces (per MWh). It compares technologies and countries on the same basis.
+- **Wholesale price.** The price generators are paid in the spot market, before network charges and retail margins. Real-time prices are set close to delivery; day-ahead prices a day before.
+- **NEM.** The National Electricity Market, covering Queensland, New South Wales, the ACT, Victoria, South Australia and Tasmania. Western Australia and the Northern Territory have separate grids.
+- **Financial and calendar years.** Australian energy statistics run July to June (financial years); the charts say which is used.
+- **MWh, GWh, TWh.** Megawatt hours, gigawatt hours and terawatt hours (1 TWh = 1,000 GWh = 1 million MWh).
+
+</div>
+
 # Research and AI {orientation="columns"}
 
 ## Column {.tabset width="50%" title="Australia's research strengths"}
