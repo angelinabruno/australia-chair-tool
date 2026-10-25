@@ -242,3 +242,4 @@ $border-radius:           6px;
 .ov > * { flex: none !important; min-height: auto !important; }
 .ov .ov-stats { display: grid !important; height: auto !important; }
 .ov .ov-section { display: block !important; clear: both; }
+@media (max-width: 640px) { .chart-takeaway { font-size: 0.78rem; } }
