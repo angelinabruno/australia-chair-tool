@@ -237,6 +237,19 @@ cat(paste0(
 
 ![](Economy/gva_share_au_us.png){title="Industry shares of the economy, Australia and the United States"}
 
+### How to read this page
+
+<div class="dc-text">
+
+- **GDP.** Gross domestic product: the value of everything produced in a country in a year. *Nominal* GDP is in today's prices; *real* GDP (chain volume, chained dollars) removes price changes, so it measures growth in output.
+- **Purchasing power parity (PPP).** A conversion that adjusts for differences in prices between countries, so GDP per person and productivity compare what the money buys, not just the exchange rate.
+- **Productivity.** Output per hour worked. The growth chart is an index; the level chart compares the two countries in the same units.
+- **GVA.** Gross value added: what each industry adds to the economy (its output less the inputs it buys). Industries' GVA sums to GDP before taxes on products.
+- **ANZSIC and NAICS.** The Australian and North American industry classifications. They mostly line up; the notes on each chart say where they don't.
+- **Financial and calendar years.** Australian national accounts run July to June; US data are calendar years.
+
+</div>
+
 # Intellectual property {orientation="columns"}
 
 ## Column {.tabset width="50%" title="US patents and trade marks in Australia"}
