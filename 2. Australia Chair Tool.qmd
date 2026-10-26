@@ -4,12 +4,14 @@ format:
   dashboard:
     theme: [cosmo, theme/csis-redesign.scss]
     embed-resources: true
-    include-after-body: theme/navigation.html   # drop-down menus and the A$/US$ toggle
+    include-after-body:
+      - theme/navigation.html   # drop-down menus and the A$/US$ toggle
+      - theme/page-guides.html  # "How to read this page" link and pop-up on pages with jargon
     nav-buttons: [github]
     scrolling: false
 filters:
   - theme/currency.lua   # attaches each chart's US$ version for the toggle
-  - theme/takeaways.lua  # one-line finding under each chart (takeaways.tsv)
+  # - theme/takeaways.lua  # one-line finding under each chart (takeaways.tsv); switched off 26 Oct 2026
 ---
 
 # Overview {scrolling="true"}
@@ -233,19 +235,6 @@ cat(paste0(
 
 ![](Economy/industry_shares_au_us.png){title="Industry shares of the economy, Australia and the United States"}
 
-### How to read this page
-
-<div class="dc-text">
-
-- **GDP.** Gross domestic product: the value of everything produced in a country in a year. *Nominal* GDP is in today's prices; *real* GDP (chain volume, chained dollars) removes price changes, so it measures growth in output.
-- **Purchasing power parity (PPP).** A conversion that adjusts for differences in prices between countries, so GDP per person and productivity compare what the money buys, not just the exchange rate.
-- **Productivity.** Output per hour worked. The growth chart is an index; the level chart compares the two countries in the same units.
-- **Value added.** What each industry adds to the economy: its output less the inputs it buys. Industries' value added sums to GDP before taxes on products.
-- **ISIC.** The UN's International Standard Industrial Classification. The ABS and BEA each map their own industries (ANZSIC and NAICS) to it for the OECD, so the industry shares compare like with like.
-- **Owner-occupied housing.** National accounts count a rent that owner-occupiers notionally pay themselves. It is left out of the industry shares because it is not produced by a business.
-- **Financial and calendar years.** Australian national accounts run July to June; US data are calendar years.
-
-</div>
 
 # Intellectual property {orientation="columns"}
 
@@ -309,19 +298,6 @@ cat(paste0(
 
 ![](Patents/tm_us_au_coapplied_states.png){title="Joint trade mark filings by state"}
 
-### How to read this page
-
-<div class="dc-text">
-
-- **Patent application.** A request to IP Australia for a standard (complete) patent. Counted by the earliest filing date anywhere in the world.
-- **US applicant.** At least one applicant or owner on the application has a US address. This is ownership, not where the inventors live.
-- **Joint filing.** An application with both a US and an Australian applicant.
-- **Publication lag.** Filings made through the international (PCT) route can reach Australia 30 months or more after they were first filed, so the latest years are incomplete. They are shaded on the time-series charts.
-- **Trade mark classes.** The 45 Nice classes (1-34 goods, 35-45 services) that a trade mark is registered for.
-- **Madrid system.** The international route for trade marks: one application through WIPO that designates Australia.
-- **Sector and field.** WIPO's grouping of patent classification codes into 35 technology fields and five sectors.
-
-</div>
 
 # Trade overview {orientation="columns"}
 
@@ -357,19 +333,6 @@ cat(paste0(
 
 ![](Trade/abs_services_balance.png){title="Services trade balance"}
 
-### How to read this page
-
-<div class="dc-text">
-
-- **Exports and imports.** In the ABS balance of payments, exports of services are called *credits* and imports *debits*. This dashboard uses exports and imports throughout; chart file names still use the ABS terms.
-- **Goods and services.** Goods are physical products (beef, gold, aircraft). Services include travel, education, transport, finance and intellectual property charges.
-- **SITC.** The Standard International Trade Classification, the UN's product codes for goods. Three-digit codes (e.g. 971 non-monetary gold) are used on the Trade in goods page.
-- **n.i.e. and n.e.s.** "Not included elsewhere" and "not elsewhere specified": catch-all categories for items that do not fit a named code.
-- **Non-monetary gold.** Gold traded as a commodity (bullion), as opposed to gold held by central banks. Its value swings with gold prices and bullion flows, so the US balance is also shown without it.
-- **Trade balance.** Exports less imports. A US surplus with Australia means Australia buys more from the US than it sells there.
-- **Calendar years.** All trade figures here are calendar years (January to December).
-
-</div>
 
 # Trade in goods
 
@@ -754,19 +717,6 @@ map
 
 ![](Energy/07_wholesale_prices_au_us.png){title="Wholesale electricity prices, Australia and US markets"}
 
-### How to read this page
-
-<div class="dc-text">
-
-- **Generation mix.** The share of electricity produced from each fuel. Rooftop (small-scale) solar is counted for both countries, even though it is not sold through the grid; the US state chart is the exception, as EIA's state file leaves it out.
-- **Renewables.** Hydro, wind, solar, bioenergy and geothermal. Nuclear is low-carbon but not renewable.
-- **LCOE.** Levelised cost of electricity: the lifetime cost of building and running a new plant, divided by the electricity it produces (per MWh). It compares technologies and countries on the same basis.
-- **Wholesale price.** The price generators are paid in the spot market, before network charges and retail margins. Real-time prices are set close to delivery; day-ahead prices a day before.
-- **NEM.** The National Electricity Market, covering Queensland, New South Wales, the ACT, Victoria, South Australia and Tasmania. Western Australia and the Northern Territory have separate grids.
-- **Financial and calendar years.** Australian energy statistics run July to June (financial years); the charts say which is used.
-- **MWh, GWh, TWh.** Megawatt hours, gigawatt hours and terawatt hours (1 TWh = 1,000 GWh = 1 million MWh).
-
-</div>
 
 # Research and AI {orientation="columns"}
 
@@ -922,22 +872,6 @@ cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitm
 
 ![](<Data centres/09_real_momentum.png>){title="Real building and structures capex"}
 
-### How to read this page
-
-<div class="dc-text">
-
-- **Information Media & Telecommunications (IMT).** The ABS industry (ANZSIC division J) that includes data centres, along with telecommunications, broadcasting and publishing. The ABS does not publish data centre spending on its own, so IMT is the closest official measure.
-- **EPM.** Equipment, plant and machinery: servers, network gear, cooling and power equipment. **B&S** is buildings and structures.
-- **Capex.** Private new capital expenditure (ABS 5625.0), current prices, not adjusted for inflation unless the chart says "real".
-- **Estimates 1 to 7.** The ABS asks firms about each financial year seven times: three times before it starts (estimates 1-3), three times during it (4-6) and once it ends (7, the actual outturn). Comparing the same estimate number across years is like for like.
-- **Realisation ratio.** Actual spending divided by the first estimate (estimate 1). Above 1x means firms spent more than they first planned.
-- **Commercial buildings n.e.c.** "Not elsewhere classified": the ABS building category that includes data centres, along with other commercial buildings it does not list separately.
-- **SITC 752 and 759.** Standard International Trade Classification codes for computers and for computer parts.
-- **MW, GW, TWh.** Megawatts and gigawatts measure power drawn at a point in time (1 GW = 1,000 MW); terawatt hours measure energy used over a year.
-- **NEM.** The National Electricity Market, the grid covering Queensland, New South Wales, the ACT, Victoria, South Australia and Tasmania.
-- **Gaps in lines.** Quarters the ABS does not publish (marked "np") are left as gaps, not drawn across.
-
-</div>
 
 # Human capital {orientation="columns"}
 
