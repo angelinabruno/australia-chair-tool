@@ -231,11 +231,11 @@ cat(paste0(
 
 ### Industry composition
 
-![](Economy/gva_level_industry.png){title="Industry composition"}
+![](Economy/industry_shares_au_us.png){title="Industry shares of the economy, Australia and the United States"}
 
-### Industries vs US
+### Market and non-market
 
-![](Economy/gva_share_au_us.png){title="Industry shares of the economy, Australia and the United States"}
+![](Economy/market_nonmarket_au_us.png){title="Market and non-market shares of the economy, Australia and the United States"}
 
 ### How to read this page
 
@@ -244,8 +244,10 @@ cat(paste0(
 - **GDP.** Gross domestic product: the value of everything produced in a country in a year. *Nominal* GDP is in today's prices; *real* GDP (chain volume, chained dollars) removes price changes, so it measures growth in output.
 - **Purchasing power parity (PPP).** A conversion that adjusts for differences in prices between countries, so GDP per person and productivity compare what the money buys, not just the exchange rate.
 - **Productivity.** Output per hour worked. The growth chart is an index; the level chart compares the two countries in the same units.
-- **GVA.** Gross value added: what each industry adds to the economy (its output less the inputs it buys). Industries' GVA sums to GDP before taxes on products.
-- **ANZSIC and NAICS.** The Australian and North American industry classifications. They mostly line up; the notes on each chart say where they don't.
+- **Value added.** What each industry adds to the economy: its output less the inputs it buys. Industries' value added sums to GDP before taxes on products.
+- **ISIC.** The UN's International Standard Industrial Classification. The ABS and BEA each map their own industries (ANZSIC and NAICS) to it for the OECD, so the industry shares compare like with like.
+- **Owner-occupied housing.** National accounts count a rent that owner-occupiers notionally pay themselves. It is left out of the industry shares because it is not produced by a business.
+- **Market and non-market.** Non-market here means public administration, education and health (ISIC O, P and Q), as in OECD productivity statistics. It is a split by activity, not by who owns the business.
 - **Financial and calendar years.** Australian national accounts run July to June; US data are calendar years.
 
 </div>

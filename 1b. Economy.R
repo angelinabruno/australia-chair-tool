@@ -383,136 +383,143 @@ gva <- read_abs("5206.0", tables = 45) |>
 
 stopifnot(n_distinct(gva$industry) == 19)
 
-# Levels: the latest financial year from the annual national accounts
-# (5204.0 Table 5, current prices), so one quarter's seasonality can't move
-# the ranking. The quarterly data above feed the contributions chart only.
-gva_fy <- read_abs("5204.0", tables = 5) |>
-  filter(grepl("\\([A-S]\\) ;  Current prices ;$", series), !is.na(value)) |>
-  transmute(date, industry = trimws(sub("\\s*\\([A-S]\\).*$", "", series)), value)
-gva_fy_all <- read_abs("5204.0", tables = 5) |>
-  filter(series == "All industries ;  Current prices ;", !is.na(value)) |>
-  select(date, total = value)
-stopifnot(n_distinct(gva_fy$industry) == 19)
+# Industry shares, Australia vs US, from harmonised data: OECD national
+# accounts, value added by economic activity (Table 6A, ISIC Rev.4), current
+# prices, national currency. ABS and BEA each classify their industries into
+# ISIC for the OECD, so the two countries' industries line up without a
+# concordance of ours. Government-run schools and hospitals count as
+# education and health in both countries (classified by activity, not owner).
+#
+# Australia's OECD years are financial years labelled by the year they start
+# (OECD "2024" = 2024-25, which matches ABS 5204.0 to within revisions).
+# Owner-occupied housing (ISIC L68A, imputed rent) is left out, so shares are
+# of the rest of value added and sum to 100%.
+oecd_va <- fetch_us(paste0("https://sdmx.oecd.org/public/rest/data/OECD.SDD.NAD,DSD_NAMAIN10@DF_TABLE6,/",
+                           "A.AUS+USA.S1.S1.B1G.........?startPeriod=2015&format=csv"),
+                    file.path(RAW_DIR, "oecd_value_added_by_activity.csv"))
+va <- utils::read.csv(oecd_va, stringsAsFactors = FALSE) |>
+  filter(UNIT_MEASURE == "XDC", PRICE_BASE == "V") |>
+  transmute(country = recode(REF_AREA, AUS = "Australia", USA = "United States"),
+            year = as.integer(TIME_PERIOD), activity = ACTIVITY, value = OBS_VALUE) |>
+  distinct(country, year, activity, .keep_all = TRUE)
 
-latest_fy  <- max(gva_fy$date)                         # June of the year it ends
-fy_name    <- function(d) paste0(year(d) - 1, "-", format(d, "%y"))
+# The 19 groups: ISIC sections, with electricity and water/waste together (as
+# in ANZSIC), trade split into wholesale (incl. motor vehicle trade) and
+# retail, and real estate without owner-occupied housing.
+IND_GROUPS <- tribble(
+  ~group,                                         ~parts,
+  "Agriculture, forestry and fishing",            "A",
+  "Mining",                                       "B",
+  "Manufacturing",                                "C",
+  "Electricity, gas, water and waste",            "D+E",
+  "Construction",                                 "F",
+  "Wholesale and motor vehicle trade",            "G-G47",
+  "Retail trade",                                 "G47",
+  "Transport and storage",                        "H",
+  "Accommodation and food",                       "I",
+  "Information and communication",               "J",
+  "Finance and insurance",                        "K",
+  "Real estate (excluding owner-occupied housing)", "L-L68A",
+  "Professional, scientific and technical",       "M",
+  "Administrative and support",                   "N",
+  "Public administration and defence",            "O",
+  "Education",                                    "P",
+  "Health and social work",                       "Q",
+  "Arts and recreation",                          "R",
+  "Other services",                               "S"
+)
+NON_MARKET <- c("Public administration and defence", "Education", "Health and social work")
 
-level_ind <- gva_fy |>
-  filter(date == latest_fy) |>
-  left_join(gva_fy_all, by = "date") |>
-  mutate(share = 100 * value / total) |>               # share of all-industry GVA
-  arrange(desc(value)) |>
-  mutate(industry = factor(industry, levels = industry))
-
-stopifnot(nrow(level_ind) == 19)
-print(head(level_ind, 3))   # check the title still holds
-
-# Drawn twice, in A$ and US$ (at the financial year's average rate).
-make_level_ind <- function(cur) {
-  d <- level_ind |> mutate(value = if (cur == "USD") value * fx_financial_year(year(latest_fy)) else value)
-  ggplot(d, aes(value, industry)) +
-  geom_col(fill = csis_colours[["navy"]], width = 0.75) +
-  geom_text(aes(label = sprintf("%s%sbn (%.1f%%)", cur_sym[[cur]],
-                                format(round(value / 1000), big.mark = ","), share)),
-            hjust = -0.12, size = 2.9, family = "source_sans",
-            colour = csis_colours[["grey"]]) +
-  scale_x_continuous(labels = label_number(scale = 1e-3, prefix = cur_sym[[cur]], suffix = "bn"),
-                     expand = expansion(mult = c(0, 0.20))) +
-  scale_y_discrete(limits = rev) +   # largest bar at the top
-  labs(title = "Australian gross value added by industry",
-       subtitle = paste0("Gross value added by ANZSIC division, current prices, ", cur_sym[[cur]], ", ",
-                         fy_name(latest_fy), " financial year. Share of all-industry GVA in brackets."),
-       x = NULL, y = NULL,
-       caption = paste("Source: ABS, Australian System of National Accounts (cat. no. 5204.0), Table 5.",
-                       "\nOwnership of dwellings (the rest of GVA) is not an ANZSIC division and is not shown.",
-                       if (cur == "USD") fx_note[["USD"]] else "")) +
-  theme_csis() +
-  theme_bars
+group_value <- function(d, parts) {
+  v <- function(a) { x <- d$value[d$activity == a]; if (length(x)) x else 0 }
+  if (grepl("-", parts)) { p <- strsplit(parts, "-")[[1]]; v(p[1]) - v(p[2]) }
+  else sum(vapply(strsplit(parts, "\\+")[[1]], v, numeric(1)))
 }
 
-save_both(make_level_ind, "gva_level_industry.png", save_plot, width = 8, height = 7)
+# Latest year both countries have every section
+ind_yr <- va |>
+  filter(activity %in% c("A", "B", "C", "D", "F", "G", "G47", "L", "L68A", "O", "P", "Q", "S")) |>
+  count(country, year) |> filter(n == 13) |> count(year) |> filter(n == 2) |>
+  pull(year) |> max()
 
-# Industry shares, Australia vs US. US: BEA GDP by industry, value added
-# (TVA105-A, current dollars, calendar years). Sectors are matched as closely
-# as the two classifications allow (ANZSIC divisions and NAICS sectors).
-# Shares are of total value added in each country (US value added sums to
-# GDP; Australia's to GVA at basic prices, i.e. before taxes on products).
-bea_va <- fetch_us("https://apps.bea.gov/industry/Release/XLS/GDPxInd/ValueAdded.xlsx",
-                   file.path(RAW_DIR, "bea_ValueAdded.xlsx"))
-us_va_raw <- readxl::read_excel(bea_va, sheet = "TVA105-A", col_names = FALSE,
-                                .name_repair = "minimal")
-hdr <- which(us_va_raw[[1]] == "Line")
-us_va_yr <- max(suppressWarnings(as.integer(unlist(us_va_raw[hdr, -(1:2)]))), na.rm = TRUE)
-us_va <- data.frame(line  = suppressWarnings(as.integer(us_va_raw[[1]])),
-                    name  = us_va_raw[[2]],
-                    value = suppressWarnings(as.numeric(
-                      us_va_raw[[which(unlist(us_va_raw[hdr, ]) == as.character(us_va_yr))]]))) |>
-  filter(!is.na(line))
-us_line <- function(...) sum(us_va$value[us_va$line %in% c(...)])
-stopifnot("BEA value added table layout changed" =
-            us_va$name[us_va$line == 89] == "Government" & us_va$name[us_va$line == 62] == "Housing")
+ind_share <- va |>
+  filter(year == ind_yr) |>
+  group_by(country) |>
+  group_modify(function(d, k) tibble(group = IND_GROUPS$group,
+                                     value = vapply(IND_GROUPS$parts, function(p) group_value(d, p), numeric(1)))) |>
+  mutate(share = 100 * value / sum(value)) |>
+  ungroup()
+stopifnot("OECD industry groups did not add up" = all(ind_share$value >= 0),
+          nrow(ind_share) == 38)
+# Check: the 19 groups plus owner-occupied housing cover the OECD total
+chk <- va |> filter(year == ind_yr, activity %in% c("_T", "L68A")) |>
+  tidyr::pivot_wider(names_from = activity, values_from = value) |>
+  left_join(ind_share |> group_by(country) |> summarise(groups = sum(value)), by = "country") |>
+  mutate(gap = abs((groups + L68A) / `_T` - 1))
+print(chk)
+if (any(chk$gap > 0.01)) warning("OECD industry groups differ from the total by more than 1%")
 
-# label, ANZSIC division (or "dwellings"), BEA lines
-sector_map <- list(
-  c("Agriculture, forestry and fishing", "Agriculture, forestry and fishing", 3),
-  c("Mining",                            "Mining", 6),
-  c("Manufacturing",                     "Manufacturing", 12),
-  c("Electricity, gas and water",        "Electricity, gas, water and waste services", 10),
-  c("Construction",                      "Construction", 11),
-  c("Wholesale trade",                   "Wholesale trade", 34),
-  c("Retail trade",                      "Retail trade", 35),
-  c("Accommodation and food",            "Accommodation and food services", 85),
-  c("Transport and warehousing",         "Transport, postal and warehousing", 40),
-  c("Information and telecommunications","Information media and telecommunications", 49),
-  c("Finance and insurance",             "Financial and insurance services", 55),
-  c("Real estate and rental",            "Rental, hiring and real estate services", c(63, 64)),
-  c("Housing (ownership of dwellings)",  "dwellings", 62),
-  c("Professional services",             "Professional, scientific and technical services", c(66, 70)),
-  c("Administrative and support",        "Administrative and support services", 71),
-  c("Government / public administration","Public administration and safety", 89),
-  c("Education",                         "Education and training", 75),
-  c("Health care and social assistance", "Health care and social assistance", 76),
-  c("Arts and recreation",               "Arts and recreation services", 82),
-  c("Other services",                    "Other services", 88)
-)
-au_dw <- read_abs("5204.0", tables = 5) |>
-  filter(series == "Ownership of dwellings ;  Current prices ;", date == latest_fy) |> pull(value)
-au_total <- gva_fy_all$total[gva_fy_all$date == latest_fy]
-us_total <- us_line(1)
-va_share <- bind_rows(lapply(sector_map, function(s) {
-  au_v <- if (s[2] == "dwellings") au_dw else level_ind$value[level_ind$industry == s[2]]
-  data.frame(sector = s[1],
-             country = c("Australia", "United States"),
-             share = c(100 * au_v / au_total,
-                       100 * us_line(as.integer(s[-(1:2)])) / us_total))
-}))
-stopifnot(abs(sum(va_share$share[va_share$country == "Australia"]) - 100) < 1,
-          abs(sum(va_share$share[va_share$country == "United States"]) - 100) < 1)
+au_yr_lab <- sprintf("%d-%02d", ind_yr, (ind_yr + 1) %% 100)   # Australia's financial year
 
-va_order <- va_share |> filter(country == "Australia") |> arrange(share) |> pull(sector)
-p_va_share <- va_share |>
-  mutate(sector = factor(sector, levels = va_order),
+ind_order <- ind_share |> filter(country == "Australia") |> arrange(share) |> pull(group)
+p_ind <- ind_share |>
+  mutate(group = factor(group, levels = ind_order),
          country = factor(country, levels = c("United States", "Australia"))) |>
-  ggplot(aes(share, sector, fill = country)) +
+  ggplot(aes(share, group, fill = country)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_text(aes(label = sprintf("%.1f%%", share)), position = position_dodge(width = 0.8),
+            hjust = -0.15, size = 2.6, family = "source_sans", colour = csis_colours[["grey"]]) +
   scale_fill_manual(values = au_us_colours, breaks = c("Australia", "United States")) +
-  scale_x_continuous(labels = label_percent(scale = 1, accuracy = 1),
-                     expand = expansion(mult = c(0, 0.05))) +
+  scale_x_continuous(labels = label_percent(scale = 1, accuracy = 1), breaks = seq(0, 30, 2),
+                     expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Industry shares of the economy, Australia and the United States",
-       subtitle = paste0("Share of total value added, current prices. Australia ", fy_name(latest_fy),
-                         " financial year; United States ", us_va_yr, "."),
+       subtitle = sprintf(paste0("Share of value added excluding owner-occupied housing, current prices, %d.\n",
+                                 "Australia: financial year %s; United States: calendar %d."),
+                          ind_yr, au_yr_lab, ind_yr),
        x = NULL, y = NULL,
-       caption = paste0("Sources: ABS, Australian System of National Accounts (cat. no. 5204.0), Table 5; ",
-                        "US BEA, GDP by Industry (value added, TVA105).",
-                        "
-Sectors matched across ANZSIC and NAICS. US government-run schools and hospitals are in",
-                        "
-Government; in Australia they are in Education and Health.",
-                        "\nUS professional services include management of companies; US utilities exclude waste services.")) +
+       caption = paste0("Source: OECD National Accounts, value added by economic activity (Table 6A, ISIC Rev.4), ",
+                        "from ABS and BEA data.\nIndustries are classified by activity in both countries, so ",
+                        "government-run schools and hospitals are in Education and Health.\n",
+                        "Owner-occupied housing (imputed rent) is excluded; the 19 groups sum to 100%.")) +
   theme_csis() +
   theme_bars
 
-save_plot(p_va_share, "gva_share_au_us.png", width = 8, height = 7.5)
+save_plot(p_ind, "industry_shares_au_us.png", width = 8.5, height = 8)
+readr::write_csv(ind_share |> mutate(year = ind_yr, australia_year = au_yr_lab), "industry_shares_au_us.csv")
+
+# Market and non-market: the OECD productivity-statistics convention, with
+# public administration, education and health (ISIC O, P, Q) as non-market.
+mkt <- ind_share |>
+  mutate(part = if_else(group %in% NON_MARKET, "Non-market (public administration, education, health)",
+                        "Market (all other industries)")) |>
+  group_by(country, part) |>
+  summarise(share = sum(share), .groups = "drop") |>
+  mutate(part = factor(part, levels = c("Non-market (public administration, education, health)",
+                                        "Market (all other industries)")),
+         country = factor(country, levels = c("United States", "Australia")))
+p_mkt <- ggplot(mkt, aes(share, country, fill = part)) +
+  geom_col(width = 0.55) +
+  geom_text(aes(label = sprintf("%.0f%%", share)), position = position_stack(vjust = 0.5),
+            size = 3.6, family = "source_sans", colour = "white", fontface = "bold") +
+  scale_fill_manual(values = c("Market (all other industries)" = csis_colours[["navy"]],
+                               "Non-market (public administration, education, health)" = csis_colours[["teal"]]),
+                    breaks = c("Market (all other industries)",
+                               "Non-market (public administration, education, health)")) +
+  scale_x_continuous(labels = label_percent(scale = 1), expand = expansion(c(0, 0.01))) +
+  guides(fill = guide_legend(ncol = 1)) +
+  labs(title = "Market and non-market shares of the economy, Australia and the United States",
+       subtitle = sprintf("Share of value added excluding owner-occupied housing, %d (Australia %s)", ind_yr, au_yr_lab),
+       x = NULL, y = NULL,
+       caption = paste0("Source: OECD National Accounts (Table 6A, ISIC Rev.4). Non-market = ISIC O, P and Q, ",
+                        "as in OECD productivity statistics.\nThis is a split by activity, not ownership: ",
+                        "private schools and hospitals count as non-market, and government businesses\n",
+                        "(e.g. postal, water) as market. OECD sector accounts have US but not Australian ",
+                        "general government value added.")) +
+  theme_csis() +
+  theme_bars
+
+save_plot(p_mkt, "market_nonmarket_au_us.png", width = 8.5, height = 3.6)
+
 
 # Contributions to through-the-year growth: each group's 4-quarter change over
 # the total 4 quarters earlier, so the contributions add up to total growth.
@@ -850,17 +857,15 @@ local({
     lv$value[lv$country == "Australia"], lv$value[lv$country == "United States"], max(lv$year),
     100 * (lv$value[lv$country == "United States"] / lv$value[lv$country == "Australia"] - 1)))
 
-  top <- level_ind[1, ]
-  line_gva <- function(cur) sprintf(
-    "%s is Australia's largest industry, at %s or %.0f%% of value added in %s.",
-    top$industry, fmt_bn((top$value / 1000) * if (cur == "USD") fx_financial_year(year(latest_fy)) else 1,
-                         cur_sym[[cur]], 0),
-    top$share, fy_name(latest_fy))
-  takeaway(ec("gva_level_industry.png"), line_gva("AUD"), line_gva("USD"))
-
-  m <- va_share |> tidyr::pivot_wider(names_from = country, values_from = share)
-  mi <- m[m$sector == "Mining", ]
-  takeaway(ec("gva_share_au_us.png"), sprintf(
-    "Mining makes up %.0f%% of Australia's economy against %.1f%% of the US economy.",
-    mi$Australia, mi$`United States`))
+  w <- ind_share |> select(country, group, share) |>
+    tidyr::pivot_wider(names_from = country, values_from = share) |>
+    mutate(gap = Australia - `United States`) |> arrange(desc(gap))
+  takeaway(ec("industry_shares_au_us.png"), sprintf(
+    "Mining is %.0f%% of Australia's economy (excluding housing) against %.1f%% in the US; the US share is larger most of all in %s (%.0f%% vs %.0f%%).",
+    w$Australia[w$group == "Mining"], w$`United States`[w$group == "Mining"],
+    tolower(w$group[nrow(w)]), w$`United States`[nrow(w)], w$Australia[nrow(w)]))
+  nm <- mkt |> filter(grepl("^Non-market", part))
+  takeaway(ec("market_nonmarket_au_us.png"), sprintf(
+    "Public administration, education and health make up %.1f%% of value added in Australia and %.1f%% in the US (%d).",
+    nm$share[nm$country == "Australia"], nm$share[nm$country == "United States"], ind_yr))
 })
