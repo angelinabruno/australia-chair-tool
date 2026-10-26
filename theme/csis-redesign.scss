@@ -215,3 +215,31 @@ $border-radius:           6px;
   font-size: 0.9rem; padding: 7px 16px; text-align: center;
   a { font-weight: 700; color: $navy; }
 }
+
+// ---- One-line takeaway under each chart (theme/takeaways.lua) ----------------
+.chart-takeaway {
+  margin: 6px 4px 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  color: $navy;
+  flex: 0 0 auto;
+}
+
+// ---- Data centres page: tables and text cards ----------------------------------
+.dc-table { overflow: auto; font-size: 0.82rem; }
+.dc-table table { width: 100%; border-collapse: collapse; }
+.dc-table th { text-align: left; color: $navy; border-bottom: 2px solid $rule; padding: 6px 8px; position: sticky; top: 0; background: #fff; }
+.dc-table td { border-bottom: 1px solid $rule; padding: 5px 8px; vertical-align: top; }
+.dc-table td.num { text-align: right; white-space: nowrap; }
+.dc-note { color: $muted; font-size: 0.78rem; margin-top: 10px; }
+.dc-text { overflow: auto; font-size: 0.9rem; line-height: 1.5; padding: 4px 8px; }
+.dc-text li { margin-bottom: 6px; }
+
+// Quarto's fill layout also squeezes the Overview sections to fit the card,
+// so at some widths the stat cards ran into the "Explore the relationship"
+// heading. Let the page flow at its natural height instead.
+.ov { display: block !important; }
+.ov > * { flex: none !important; min-height: auto !important; }
+.ov .ov-stats { display: grid !important; height: auto !important; }
+.ov .ov-section { display: block !important; clear: both; }
+@media (max-width: 640px) { .chart-takeaway { font-size: 0.78rem; } }

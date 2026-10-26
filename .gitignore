@@ -54,8 +54,11 @@ Critical minerals/**
 !Economy/gdp_index_au_us.png
 !Economy/gdp_au_us.png
 !Economy/productivity_au_us.png
-!Economy/gva_level_industry.png
+!Economy/industry_shares_au_us.png
+!Economy/gdp_per_capita_au_us.png
+!Economy/productivity_level_au_us.png
 !Investment/iip_levels_latest.png
+!Investment/iip_by_type_latest.png
 !Trade/abs_services_balance.png
 !Trade/dfat_*.png
 !Trade/overview_us_share_by_service.png
@@ -63,6 +66,7 @@ Critical minerals/**
 !Trade/us_au_trade_balance.png
 !Trade/goods_exports_*.png
 !Trade/goods_imports_*.png
+!Trade/goods_top10_us.png
 !Trade/credits_*.png
 !Trade/debits_*.png
 !Data centres/01_divj_by_asset.png
@@ -74,6 +78,9 @@ Critical minerals/**
 !Data centres/07_realisation_ratio_divj_epm.png
 !Data centres/08_divj_financial_year.png
 !Data centres/09_real_momentum.png
+!Data centres/1[0-6]_*.png
+!Data centres/dc_reference_data.csv
+!Data centres/dc_projects_tracker.csv
 !Energy/0*.png
 !Critical minerals/minerals_au_*.png
 !Migration/nom_usa_national.png
@@ -89,6 +96,7 @@ Critical minerals/**
 !Patents/us_*.png
 !Patents/tm_*.png
 !Tech/[A-F]_*.png
+!Tech/technology_keywords.csv
 
 # US$ versions of the money charts (the A$/US$ toggle; see "0. Exchange rates.R")
 !Economy/*_usd.png

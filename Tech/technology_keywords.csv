@@ -1,0 +1,9 @@
+technology,openalex_query,searched_in,years
+Artificial intelligence,"""machine learning"" OR ""deep learning"" OR ""neural network"" OR ""artificial intelligence"" OR ""large language model""",title and abstract,2015-2025
+Quantum computing,"""quantum computing"" OR ""quantum computer"" OR ""qubit"" OR ""quantum error correction""",title and abstract,2015-2025
+Quantum sensing and comms,"""quantum sensing"" OR ""quantum key distribution"" OR ""quantum communication"" OR ""quantum metrology""",title and abstract,2015-2025
+Advanced comms (5G/6G),"""5G network"" OR ""6G network"" OR ""millimeter wave communication"" OR ""massive MIMO"" OR ""network slicing""",title and abstract,2015-2025
+Cybersecurity,"""cybersecurity"" OR ""intrusion detection"" OR ""post-quantum cryptography"" OR ""malware detection""",title and abstract,2015-2025
+Semiconductors,"""semiconductor device"" OR ""integrated circuit design"" OR ""photonic integrated circuit"" OR ""compound semiconductor""",title and abstract,2015-2025
+Autonomous systems and robotics,"""autonomous vehicle"" OR ""unmanned aerial vehicle"" OR ""swarm robotics"" OR ""robot navigation""",title and abstract,2015-2025
+Critical minerals processing,"""rare earth extraction"" OR ""lithium extraction"" OR ""hydrometallurgy"" OR ""critical mineral processing""",title and abstract,2015-2025

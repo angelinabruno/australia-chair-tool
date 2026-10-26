@@ -5,6 +5,7 @@ if (Sys.getenv("DASHBOARD_DIR") == "")
   stop("Dashboard folder not set. Run section 1 of '1. Refresh all data.R' first.")
 setwd(file.path(Sys.getenv("DASHBOARD_DIR"), "Energy"))
 source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
 
 # ==============================================================================
 # Australian energy: five charts for a US policy audience
@@ -231,39 +232,116 @@ fuel_col_note <- function(fuels) {
   paste(sprintf("%s %s", fuels, fuel_cols[fuels]), collapse = "; ")
 }
 
+# ------------------------------------------------------------------------------
+# 1b. US electricity generation (EIA), for the Australia vs US charts
+# ------------------------------------------------------------------------------
+# National, calendar years: EIA Monthly Energy Review Table 7.2a (net
+# generation by source, all sectors) and Table 10.6 (solar, which splits
+# utility-scale and small-scale solar). Small-scale (rooftop) solar is
+# included so the US matches Australia's Table O, which includes rooftop PV.
+# EIA estimates small-scale solar from 2014; earlier years are utility only.
+# By state, calendar years: EIA Electric Power Annual state file (net
+# generation by state and source). It has no small-scale solar.
+# All free downloads, no API key. Kept in Energy/raw/eia/, refreshed weekly.
+
+EIA_DIR <- file.path("raw", "eia")
+dir.create(EIA_DIR, recursive = TRUE, showWarnings = FALSE)
+eia_get <- function(url, file) {
+  dest <- file.path(EIA_DIR, file)
+  if (!file.exists(dest) || difftime(Sys.time(), file.mtime(dest), units = "days") > 7)
+    utils::download.file(url, dest, mode = "wb", quiet = TRUE, headers = c(`User-Agent` = "Mozilla/5.0"))
+  dest
+}
+mer_annual <- function(table) {
+  f <- eia_get(paste0("https://www.eia.gov/totalenergy/data/browser/csv.php?tbl=", table),
+               paste0("mer_", table, ".csv"))
+  read_csv(f, show_col_types = FALSE, col_types = cols(.default = "c")) |>
+    filter(substr(YYYYMM, 5, 6) == "13") |>                  # annual totals
+    transmute(msn = MSN, year = as.integer(substr(YYYYMM, 1, 4)),
+              gwh = suppressWarnings(as.numeric(Value)))     # million kWh = GWh
+}
+
+us_raw <- bind_rows(mer_annual("T07.02A"),
+                    mer_annual("T10.06") |> filter(msn %in% c("SOT5PUS", "SOT7PUS"))) |>
+  filter(year >= 1990) |>
+  tidyr::pivot_wider(names_from = msn, values_from = gwh, values_fill = 0)
+
+US_MAP <- c(CLETPUS = "Coal", NGETPUS = "Gas", PAETPUS = "Oil", OJETPUS = "Other",
+            NUETPUS = "Nuclear", HVETPUS = "Hydro", WYETPUS = "Wind",
+            WDETPUS = "Bioenergy", WSETPUS = "Bioenergy", GEETPUS = "Geothermal",
+            SOT5PUS = "Utility solar", SOT7PUS = "Rooftop solar")
+us_gen <- us_raw |>
+  mutate(other_rest = ELETPUS - (CLETPUS + NGETPUS + PAETPUS + OJETPUS + NUETPUS + HVETPUS +
+                                   HPETPUS + WYETPUS + WDETPUS + WSETPUS + GEETPUS + SOETPUS)) |>
+  select(year, all_of(names(US_MAP)), other_rest) |>
+  pivot_longer(-year, names_to = "msn", values_to = "gwh") |>
+  mutate(fuel = if_else(msn == "other_rest", "Other", US_MAP[msn])) |>
+  group_by(year, fuel) |> summarise(gwh = sum(pmax(gwh, 0)), .groups = "drop") |>
+  mutate(country = "United States")
+us_last <- max(us_gen$year)
+stopifnot(n_distinct(us_gen$fuel) >= 10)
+
+# Both countries in one set of fuel groups: Australia's black and brown coal
+# become Coal; the US adds Nuclear.
+cmp_levels <- c("Coal", "Other", "Gas", "Oil", "Nuclear", "Bioenergy", "Geothermal",
+                "Hydro", "Wind", "Utility solar", "Rooftop solar")
+cmp_cols <- c(fuel_cols[c("Other", "Gas", "Oil", "Bioenergy", "Geothermal", "Hydro", "Wind",
+                          "Utility solar", "Rooftop solar")],
+              Coal = "#2c2c2a", Nuclear = "#b8478c")
+cmp_lab  <- c("Rooftop solar" = "Rooftop / small-scale solar")
+CMP_RENEW <- c("Hydro", "Wind", "Utility solar", "Rooftop solar", "Bioenergy", "Geothermal")
+to_cmp <- function(f) if_else(f %in% c("Black coal", "Brown coal"), "Coal", f)
+
+au_fy_cmp <- gen_fy |> filter(region == "AUS") |>
+  mutate(fuel = to_cmp(fuel)) |> group_by(year, fuel) |>
+  summarise(gwh = sum(gwh), .groups = "drop") |> mutate(country = "Australia")
+mix_ts <- bind_rows(au_fy_cmp, us_gen) |>
+  tidyr::complete(tidyr::nesting(country, year), fuel, fill = list(gwh = 0)) |>   # no gaps in the areas
+  group_by(country, year) |> mutate(share = gwh / sum(gwh)) |> ungroup() |>
+  mutate(fuel = factor(fuel, levels = cmp_levels))
+
+US_SRC <- paste0("US: EIA, Monthly Energy Review, Tables 7.2a and 10.6 (calendar years; small-scale solar ",
+                 "estimated from 2014, so earlier US solar is utility-scale only).")
+
 
 # ------------------------------------------------------------------------------
-# 3. CHART 1 - the coal exit, 35 years
+# 3. CHART 1 - generation mix over time, Australia and the US
 #
-# So what: coal peaked around 2008-09 and has fallen since. This is the fastest
-# turnover of a major grid in the OECD, and every closure date is a reliability
-# question that shapes gas demand and storage procurement.
+# Shares of total generation, so the two very different-sized grids can be
+# compared. Coal peaked around 2008-09 in Australia; in the US gas replaced
+# coal while nuclear held steady.
 # ------------------------------------------------------------------------------
 
-p1 <- gen_fy |>
-  filter(region == "AUS") |>
-  mutate(fuel = as_fuel(fuel),
-         twh  = gwh / 1000) |>          # named column so the CSV export can find it
-  ggplot(aes(year, twh, fill = fuel)) +
+p1 <- mix_ts |>
+  mutate(country = recode(country,
+                          Australia = "Australia (financial years, by the year they start)",
+                          `United States` = "United States (calendar years)")) |>
+  ggplot(aes(year, share, fill = fuel)) +
   geom_area(colour = "white", linewidth = 0.15) +
-  scale_fill_manual(values = fuel_cols, drop = FALSE) +
-  scale_y_continuous(labels = comma, expand = expansion(c(0, 0.02))) +
-  scale_x_continuous(breaks = seq(1990, 2025, 5)) +
+  facet_wrap(~country, ncol = 2) +
+  scale_fill_manual(values = cmp_cols, labels = function(x) ifelse(x %in% names(cmp_lab), cmp_lab[x], x),
+                    drop = TRUE) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), expand = expansion(c(0, 0))) +
+  scale_x_continuous(breaks = seq(1990, 2025, 10), expand = expansion(c(0, 0.02))) +
+  guides(fill = guide_legend(nrow = 2)) +
   labs(
-    title    = "Australian electricity generation by fuel type",
-    subtitle = "Electricity generation by fuel, TWh, financial years 1989-90 to 2024-25",
-    x = NULL, y = "TWh", caption = SRC
+    title    = "Electricity generation by fuel, Australia and the United States",
+    subtitle = sprintf("Share of total generation, 1990 to %d. Australia from 1989-90 to 2024-25.", us_last),
+    x = NULL, y = NULL,
+    caption  = paste0("Sources: Australia: DCCEEW, Australian Energy Statistics, Table O (includes rooftop solar).\n",
+                      US_SRC, "\nAustralia's black and brown coal are combined. US pumped storage is left out.")
   ) +
-  theme_csis()
+  theme_csis() +
+  theme(strip.text = element_text(face = "bold", hjust = 0), panel.spacing.x = unit(1.5, "lines"))
 
-ggsave("01_fuel_mix_timeseries.png", p1, width = 9, height = 5.5, dpi = 150, bg = "white")
+ggsave("01_fuel_mix_timeseries.png", p1, width = 10, height = 5.5, dpi = 150, bg = "white")
 
 export_chart_csv(p1, "01_fuel_mix_timeseries.csv",
-                 y_format = "number", chart_type = "Stacked area",
-                 extra = "fuel",
-                 notes = paste0("Values are TWh (not counts). year = start year of the financial year ",
-                                "(1989 = 1989-90). Stacked in fuel order. Fill colours: ",
-                                fuel_col_note(unique(p1$data$fuel)), "."))
+                 y_format = "percent", chart_type = "Stacked area (100%), two panels",
+                 extra = c("country", "fuel"),
+                 notes = paste0("Shares of total generation. Australia year = start year of the financial year ",
+                                "(1989 = 1989-90); US calendar years."))
+
 
 
 # ------------------------------------------------------------------------------
@@ -319,59 +397,133 @@ export_chart_csv(p2, "02_state_fuel_mix.csv",
 
 
 # ------------------------------------------------------------------------------
-# 5. CHART 3 - electricity is only part of the story
+# 5. CHART 3 - electricity generation by fuel, Australia vs US, latest year
 #
-# So what: oil is Australia's largest primary energy source and barely touches
-# the grid. The gap between these two bars is transport, and it is imported
-# refined product. This is the strategic vulnerability Table O cannot show.
-#
-# Primary energy figures are AES Table C, 2023-24 - the most recent published
-# year. Table C runs a year behind Table O; 2024-25 is due September 2026.
+# (Was primary energy vs electricity; the primary energy bar was removed.
+# The file name is kept so the dashboard link does not change.)
 # ------------------------------------------------------------------------------
 
-elec_2025 <- gen_cy |>
-  filter(region == "AUS", year == 2025) |>
-  mutate(grp = case_when(
-    fuel %in% c("Black coal", "Brown coal") ~ "Coal",
-    fuel == "Gas" ~ "Gas",
-    fuel == "Oil" ~ "Oil",
-    TRUE          ~ "Renewables")) |>
-  count(grp, wt = gwh, name = "gwh") |>
-  mutate(share = gwh / sum(gwh), basis = "Electricity only\n(2025)") |>
-  select(basis, fuel = grp, share)
-
+# Same calendar year for both: Australia from Table O's calendar-year sheet,
+# the US from EIA.
+mix_year <- min(us_last, max(gen_cy$year[gen_cy$region == "AUS"]))
 comparison <- bind_rows(
-  tibble(basis = "All primary energy\n(2023-24)",
-         fuel  = c("Coal", "Oil", "Gas", "Renewables"),
-         share = c(0.25, 0.41, 0.25, 0.09)),
-  elec_2025
+  gen_cy |> filter(region == "AUS", year == mix_year) |> mutate(fuel = to_cmp(fuel), country = "Australia"),
+  us_gen |> filter(year == mix_year)
 ) |>
-  mutate(fuel = fct_relevel(fuel, "Coal", "Oil", "Gas", "Renewables"))
+  group_by(country, fuel) |> summarise(gwh = sum(gwh), .groups = "drop") |>
+  group_by(country) |> mutate(share = gwh / sum(gwh)) |> ungroup() |>
+  mutate(fuel = factor(fuel, levels = cmp_levels),
+         country = factor(country, levels = c("United States", "Australia")))
 
-p3 <- ggplot(comparison, aes(share, basis, fill = fuel)) +
-  geom_col(width = 0.55) +
-  geom_text(aes(label = ifelse(share > 0.05, percent(share, accuracy = 1), "")),
+p3 <- ggplot(comparison, aes(share, country, fill = fuel)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = ifelse(share >= 0.04, percent(share, accuracy = 1), "")),
             position = position_stack(vjust = 0.5), colour = "white", size = 3.2) +
-  scale_fill_manual(values = c(Coal = "#2c2c2a", Oil = "#993c1d",
-                               Gas  = "#eb6834", Renewables = "#1baf7a")) +
+  scale_fill_manual(values = cmp_cols, labels = function(x) ifelse(x %in% names(cmp_lab), cmp_lab[x], x),
+                    drop = TRUE) +
   scale_x_continuous(labels = percent_format(accuracy = 1), expand = c(0, 0)) +
+  guides(fill = guide_legend(nrow = 2)) +
   labs(
-    title    = "Fuel shares of primary energy and of electricity generation",
-    subtitle = "Share of Australian primary energy supply (2023-24) and of electricity generation (2025), by fuel",
+    title    = "Electricity generation by fuel, Australia and the United States",
+    subtitle = sprintf("Share of total generation, calendar %d", mix_year),
     x = NULL, y = NULL,
-    caption = "Source: DCCEEW, Australian Energy Statistics, Tables C (2023-24) and O (2025)."
+    caption = paste0("Sources: DCCEEW, Australian Energy Statistics, Table O (calendar years, includes rooftop solar);\n",
+                     "EIA, Monthly Energy Review, Tables 7.2a and 10.6 (includes small-scale solar). ",
+                     "Labels shown for shares of 4% or more.")
   ) +
   theme_csis()
 
-ggsave("03_primary_vs_electricity.png", p3, width = 9, height = 3.6, dpi = 150, bg = "white")
+ggsave("03_primary_vs_electricity.png", p3, width = 9, height = 3.8, dpi = 150, bg = "white")
 
 export_chart_csv(p3, "03_primary_vs_electricity.csv",
                  y_format = "percent", chart_type = "Stacked horizontal bar (100%)",
                  value_var = "share", extra = "fuel",
-                 notes = paste0("Value is on the x-axis. Primary energy shares (2023-24) are hard-coded from ",
-                                "AES Table C; electricity shares (2025) computed from Table O. In-bar labels ",
-                                "shown only for segments above 5%. Fill colours: Coal #2c2c2a; Oil #993c1d; ",
-                                "Gas #eb6834; Renewables #1baf7a."))
+                 notes = sprintf("Calendar %d for both countries. File name kept from the earlier primary energy chart.",
+                                 mix_year))
+
+# ------------------------------------------------------------------------------
+# 5b. US generation mix in the main data centre states (EIA, by state)
+# ------------------------------------------------------------------------------
+DC_STATES <- c(VA = "Virginia", TX = "Texas", CA = "California", OR = "Oregon",
+               AZ = "Arizona", GA = "Georgia", OH = "Ohio", IL = "Illinois", "US-TOTAL" = "United States")
+STATE_MAP <- c("Coal" = "Coal", "Natural Gas" = "Gas", "Petroleum" = "Oil", "Other Gases" = "Other",
+               "Nuclear" = "Nuclear", "Hydroelectric Conventional" = "Hydro", "Wind" = "Wind",
+               "Solar Thermal and Photovoltaic" = "Utility solar",
+               "Wood and Wood Derived Fuels" = "Bioenergy", "Other Biomass" = "Bioenergy",
+               "Geothermal" = "Geothermal", "Other" = "Other")
+st_file <- eia_get("https://www.eia.gov/electricity/data/state/annual_generation_state.xls",
+                   "annual_generation_state.xls")
+us_states <- read_excel(st_file, skip = 1) |>
+  rename(year = 1, state = 2, producer = 3, source = 4, mwh = 5) |>
+  filter(producer == "Total Electric Power Industry", state %in% names(DC_STATES),
+         source %in% names(STATE_MAP)) |>
+  mutate(year = as.integer(year), fuel = STATE_MAP[source], mwh = pmax(as.numeric(mwh), 0))
+st_year <- max(us_states$year)
+st_shares <- us_states |>
+  filter(year == st_year) |>
+  group_by(state, fuel) |> summarise(gwh = sum(mwh) / 1000, .groups = "drop") |>
+  group_by(state) |>
+  mutate(share = gwh / sum(gwh), twh = sum(gwh) / 1000,
+         renew = sum(gwh[fuel %in% CMP_RENEW]) / sum(gwh)) |>
+  ungroup() |>
+  mutate(fuel = factor(fuel, levels = cmp_levels),
+         label = sprintf("%s  (%s TWh)", DC_STATES[state], comma(twh, accuracy = 1)),
+         label = fct_reorder(label, renew))
+
+p8 <- ggplot(st_shares, aes(share, label, fill = fuel)) +
+  geom_col(width = 0.72) +
+  geom_text(data = distinct(st_shares, label, renew),
+            aes(x = 1.02, y = label, label = percent(renew, accuracy = 1)),
+            inherit.aes = FALSE, hjust = 0, size = 3.1, colour = "grey20") +
+  scale_fill_manual(values = cmp_cols, drop = TRUE) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = c(0, 0), limits = c(0, 1.09)) +
+  guides(fill = guide_legend(nrow = 2)) +
+  labs(
+    title    = sprintf("Electricity generation mix in US data centre states, %d", st_year),
+    subtitle = sprintf("Share of generation by fuel, calendar %d. Right-hand figure is renewable share.", st_year),
+    x = NULL, y = NULL,
+    caption  = paste0("Source: EIA, Electric Power Annual, net generation by state (all producers). ",
+                      "Excludes small-scale (rooftop) solar,\nwhich EIA does not publish in this file, ",
+                      "and pumped storage. Generation is where power is made, not where it is used.")
+  ) +
+  theme_csis()
+
+ggsave("08_us_state_fuel_mix.png", p8, width = 9.5, height = 5.2, dpi = 150, bg = "white")
+
+# ------------------------------------------------------------------------------
+# 5c. Renewable share over time, Australia vs US
+# ------------------------------------------------------------------------------
+renew_ts <- mix_ts |>
+  group_by(country, year) |>
+  summarise(share = sum(share[fuel %in% CMP_RENEW]), .groups = "drop") |>
+  filter(year >= 2000)
+renew_last <- renew_ts |> group_by(country) |> slice_max(year, n = 1) |> ungroup()
+
+p9 <- ggplot(renew_ts, aes(year, share, colour = country)) +
+  geom_line(linewidth = 1) +
+  geom_point(data = renew_last, size = 2.4) +
+  geom_text(data = renew_last, aes(label = percent(share, accuracy = 1)), hjust = -0.3, size = 3.4,
+            show.legend = FALSE) +
+  scale_colour_manual(values = c(Australia = "#00205B", `United States` = "#D2232A"),
+                      labels = c(Australia = "Australia (financial years, by the year they start)",
+                                 `United States` = "United States (calendar years)")) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, NA),
+                     expand = expansion(c(0, 0.05))) +
+  scale_x_continuous(breaks = seq(2000, 2025, 5), expand = expansion(c(0.01, 0.06))) +
+  labs(
+    title    = "Renewable share of electricity generation, Australia and the United States",
+    subtitle = "Hydro, wind, solar (including rooftop), bioenergy and geothermal, share of total generation",
+    x = NULL, y = NULL,
+    caption  = paste0("Sources: Australia: DCCEEW, Australian Energy Statistics, Table O.
+", US_SRC,
+                      sprintf("\nNuclear, which is low-carbon but not renewable, was %.0f%% of US generation in %d and none of Australia's.",
+                              100 * sum(mix_ts$share[mix_ts$country == "United States" & mix_ts$year == us_last &
+                                                       mix_ts$fuel == "Nuclear"]), us_last))
+  ) +
+  theme_csis()
+
+ggsave("09_renewable_share_au_us.png", p9, width = 9, height = 5, dpi = 150, bg = "white")
+
 
 
 # ------------------------------------------------------------------------------
@@ -404,8 +556,12 @@ p4 <- ggplot(renew_hist, aes(year, share)) +
   scale_x_continuous(breaks = seq(2000, 2030, 5)) +
   labs(
     title    = "Renewable share of electricity generation and the 82% target for 2030",
-    subtitle = "Renewable share of total generation, financial years, against a straight-line path to target",
-    x = NULL, y = NULL, caption = SRC
+    subtitle = paste("Renewable share of all Australian electricity generation (all grids, off-grid and rooftop solar),",
+                     "
+financial years shown by the year they start, against a straight-line path to the target"),
+    x = NULL, y = NULL,
+    caption = paste(SRC, "
+The 82% target applies to the main grids (NEM and WA's SWIS), so this all-Australia share is a close proxy, not the official measure.")
   ) +
   theme_csis()
 
@@ -435,14 +591,15 @@ p5 <- gen_fy |>
   filter(region == "AUS", fuel %in% RENEWABLES, year >= 2005) |>
   mutate(fuel = as_fuel(fuel),
          twh  = gwh / 1000) |>          # named column so the CSV export can find it
+  mutate(fuel = droplevels(fuel)) |>   # legend lists only the renewable fuels shown
   ggplot(aes(year, twh, fill = fuel)) +
   geom_col(width = 0.75) +
-  scale_fill_manual(values = fuel_cols, drop = FALSE) +
+  scale_fill_manual(values = fuel_cols, drop = TRUE) +
   scale_y_continuous(labels = comma, expand = expansion(c(0, 0.05))) +
   scale_x_continuous(breaks = seq(2005, 2025, 5)) +
   labs(
     title    = "Renewable electricity generation by technology",
-    subtitle = "Renewable generation by technology, TWh, financial years",
+    subtitle = "Renewable generation by technology, TWh, financial years shown by the year they start",
     x = NULL, y = "TWh", caption = SRC
   ) +
   theme_csis()
@@ -530,7 +687,7 @@ stopifnot(nrow(lcoe) > 40, n_distinct(lcoe$country) == 2)
 lcoe_latest <- lcoe |> group_by(technology, country) |> slice_max(year, n = 1) |> ungroup()
 lcoe_yr     <- max(lcoe_latest$year)
 
-au_us_cols <- c("Australia" = "#eda100", "United States" = "#00205B")
+au_us_cols <- c("Australia" = "#00205B", "United States" = "#D2232A")   # as on every page
 
 # From 2015: the 2010-12 solar costs (up to $490/MWh) would flatten the recent comparison.
 lcoe_plot <- lcoe |> filter(year >= 2015)
@@ -818,13 +975,20 @@ qtr_label    <- function(d) paste0(format(d, "%Y"), " Q", (as.integer(format(d, 
 price_latest <- price_qtr |> filter(quarter == max(quarter))
 price_q      <- max(price_latest$quarter)
 
-price_cols <- c("Texas (ERCOT)" = "#D2232A", "California (SP15)" = "#00205B",
-                NSW = "#eda100", QLD = "#993c1d", VIC = "#2a78d6", SA = "#1baf7a")
+# Australia in navy shades, the US in red shades. The chart shows the two
+# largest NEM regions and the two US markets; QLD and SA go in the caption.
+price_cols <- c("Texas (ERCOT)" = "#D2232A", "California (SP15)" = "#F08A8E",
+                NSW = "#00205B", VIC = "#5B8BD0")
+CHART_REGIONS <- names(price_cols)
+note_regions  <- price_latest |> filter(!region %in% CHART_REGIONS)
 
 # Drawn twice: US$ (NEM converted) and A$ (US markets converted).
 make_p7 <- function(cur) {
-price_qtr    <- price_qtr    |> mutate(price = if (cur == "USD") price_usd else price_aud)
-price_latest <- price_latest |> mutate(price = if (cur == "USD") price_usd else price_aud)
+price_qtr    <- price_qtr    |> filter(region %in% CHART_REGIONS) |>
+  mutate(price = if (cur == "USD") price_usd else price_aud, region = droplevels(region))
+price_latest <- price_latest |> filter(region %in% CHART_REGIONS) |>
+  mutate(price = if (cur == "USD") price_usd else price_aud)
+others <- note_regions |> mutate(price = if (cur == "USD") price_usd else price_aud)
 ggplot(price_qtr, aes(quarter, price, colour = region)) +
   geom_line(aes(linewidth = region %in% us_markets)) +
   geom_point(size = 1.4) +
@@ -840,15 +1004,19 @@ ggplot(price_qtr, aes(quarter, price, colour = region)) +
   labs(
     title    = if (has_ercot) "Wholesale electricity prices, Australian NEM regions, California and Texas (ERCOT)"
                else "Wholesale electricity prices, Australian NEM regions and California",
-    subtitle = sprintf(paste0("Average wholesale spot price, %s per MWh, quarterly, %s to %s. ",
-                              "Australian states are NEM regions."),
+    subtitle = sprintf(paste0("Average wholesale price, %s per MWh, calendar quarters, %s to %s.
+",
+                              "NEM and Texas: real-time prices; California: day-ahead prices."),
                        cur_sym[[cur]], qtr_label(min(price_qtr$quarter)), qtr_label(price_q)),
     x = NULL, y = NULL,
     caption  = paste0("Sources: AEMO aggregated price and demand data (5-minute regional prices); ",
                       "CAISO OASIS (hourly day-ahead price, SP15 hub);\n",
                       if (has_ercot) "ERCOT (15-minute real-time price, hub average HB_HUBAVG); " else "",
                       "RBA daily A$/US$ exchange rates, averaged for each month to convert that month.\n",
-                      "Simple time-weighted averages of all intervals.",
+                      "Simple time-weighted averages of all intervals. ",
+                      if (nrow(others)) paste0("Not shown, ", qtr_label(price_q), ": ",
+                                               paste(sprintf("%s %s%.0f", others$region, cur_sym[[cur]], others$price),
+                                                     collapse = ", "), ".") else "",
                       if (has_ercot) "" else " Texas (ERCOT) not shown: no ERCOT data available on this run.")
   ) +
   theme_csis()
@@ -867,5 +1035,64 @@ export_chart_csv(p7, "07_wholesale_prices_au_us.csv",
 
 write_csv(lcoe |> arrange(technology, country, year), "lcoe_au_us_tidy.csv")
 write_csv(price_qtr |> arrange(region, quarter), "wholesale_prices_au_us_tidy.csv")
+
+# Takeaways under each chart
+local({
+  en <- function(file) file.path("Energy", file)
+  coal <- gen_fy |> filter(region == "AUS") |> group_by(year) |>
+    summarise(coal = sum(gwh[grepl("coal", fuel, ignore.case = TRUE)]) / sum(gwh), .groups = "drop")
+  pk <- coal |> slice_max(coal, n = 1); lt <- coal |> slice_max(year, n = 1)
+  fy <- function(y) paste0(y, "-", sprintf("%02d", (y + 1) %% 100))
+  us_c <- mix_ts |> filter(country == "United States") |> group_by(year) |>
+    summarise(coal = sum(share[fuel == "Coal"]), .groups = "drop")
+  takeaway(en("01_fuel_mix_timeseries.png"), sprintf(
+    "Coal's share of electricity fell from a peak of %.0f%% in %s to %.0f%% in %s in Australia, and from %.0f%% in %d to %.0f%% in %d in the US.",
+    100 * pk$coal, fy(pk$year), 100 * lt$coal, fy(lt$year),
+    100 * max(us_c$coal), us_c$year[which.max(us_c$coal)], 100 * us_c$coal[us_c$year == us_last], us_last))
+  takeaway(en("04_renewables_vs_target.png"), sprintf(
+    "Renewables supplied %.0f%% of Australian electricity in %s; reaching 82%% by 2030 needs about %.0f percentage points a year.",
+    100 * last_pt$share, fy(last_pt$year), 100 * (0.82 - last_pt$share) / (2030 - last_pt$year)))
+  rn <- gen_fy |> filter(region == "AUS", fuel %in% RENEWABLES, year == max(year)) |> arrange(desc(gwh))
+  takeaway(en("05_renewables_composition.png"), sprintf(
+    "%s was the largest renewable source in %s, at %.1f TWh.", rn$fuel[1], fy(max(gen_fy$year)), rn$gwh[1] / 1000))
+  l7 <- function(cur) {
+    p <- price_latest |> mutate(v = if (cur == "USD") price_usd else price_aud)
+    g <- function(r) p$v[p$region == r]
+    sprintf("In %s wholesale power averaged %s%.0f/MWh in NSW and %s%.0f in Victoria, against %s%.0f in Texas and %s%.0f in California.",
+            qtr_label(price_q), cur_sym[[cur]], g("NSW"), cur_sym[[cur]], g("VIC"),
+            cur_sym[[cur]], if (has_ercot) g("Texas (ERCOT)") else NA, cur_sym[[cur]], g("California (SP15)"))
+  }
+  takeaway(en("07_wholesale_prices_au_us.png"), l7("AUD"), l7("USD"))
+  st <- state_shares |> distinct(region, renew) |> arrange(desc(renew))
+  takeaway(en("02_state_fuel_mix.png"), sprintf(
+    "Renewables supplied %.0f%% of electricity in %s in 2025 but %.0f%% in %s.",
+    100 * st$renew[1], st$region[1], 100 * st$renew[nrow(st)], st$region[nrow(st)]))
+  cm <- comparison |> group_by(country) |>
+    summarise(coal = sum(share[fuel == "Coal"]), gas = sum(share[fuel == "Gas"]),
+              ren = sum(share[fuel %in% CMP_RENEW]), nuc = sum(share[fuel == "Nuclear"]))
+  g <- function(c, v) 100 * cm[[v]][cm$country == c]
+  takeaway(en("03_primary_vs_electricity.png"), sprintf(
+    "In %d coal made up %.0f%% of Australia's electricity and %.0f%% of the US's; gas %.0f%% and %.0f%%; renewables %.0f%% and %.0f%% (plus %.0f%% nuclear in the US).",
+    mix_year, g("Australia", "coal"), g("United States", "coal"), g("Australia", "gas"), g("United States", "gas"),
+    g("Australia", "ren"), g("United States", "ren"), g("United States", "nuc")))
+  sr <- st_shares |> distinct(state, renew) |> filter(state != "US-TOTAL") |> arrange(desc(renew))
+  takeaway(en("08_us_state_fuel_mix.png"), sprintf(
+    "Among the main US data centre states, renewables supplied the most electricity in %s (%.0f%%) and the least in %s (%.0f%%) in %d; Virginia %.0f%%.",
+    DC_STATES[sr$state[1]], 100 * sr$renew[1], DC_STATES[sr$state[nrow(sr)]], 100 * sr$renew[nrow(sr)], st_year,
+    100 * sr$renew[sr$state == "VA"]))
+  rl <- renew_last
+  takeaway(en("09_renewable_share_au_us.png"), sprintf(
+    "Renewables supplied %.0f%% of Australia's electricity in %s and %.0f%% of the US's in %d.",
+    100 * rl$share[rl$country == "Australia"], fy(rl$year[rl$country == "Australia"]),
+    100 * rl$share[rl$country == "United States"], rl$year[rl$country == "United States"]))
+  l6 <- function(cur) {
+    k <- if (cur == "AUD") 1 / lcoe_rate else 1
+    v <- function(t, c) lcoe_latest$lcoe[lcoe_latest$technology == t & lcoe_latest$country == c] * k
+    sprintf("New utility-scale solar cost %s%.0f/MWh in Australia and %s%.0f in the US in %d; onshore wind %s%.0f and %s%.0f.",
+            cur_sym[[cur]], v("Utility-scale solar PV", "Australia"), cur_sym[[cur]], v("Utility-scale solar PV", "United States"),
+            lcoe_yr, cur_sym[[cur]], v("Onshore wind", "Australia"), cur_sym[[cur]], v("Onshore wind", "United States"))
+  }
+  takeaway(en("06_lcoe_au_us.png"), l6("AUD"), l6("USD"))
+})
 
 message("Done - charts 6 and 7 written to ", getwd())

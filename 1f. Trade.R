@@ -30,7 +30,8 @@ if (Sys.getenv("DASHBOARD_DIR") == "")
 TRADE_DIR     <- file.path(Sys.getenv("DASHBOARD_DIR"), "Trade")
 setwd(TRADE_DIR)   # charts saved without a folder land in Trade/
 source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Exchange rates.R"))   # A$/US$ toggle
-RAW_DIR       <- file.path(TRADE_DIR, "raw")
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))       # line under each chart
+RAW_DIR      <- file.path(TRADE_DIR, "raw")
 MAX_AGE_DAYS  <- 30
 FORCE_REFRESH <- FALSE
 
@@ -579,7 +580,7 @@ ggplot(services_plot, aes(year, value, fill = direction)) +
   ) +
   labs(
     title    = "Australia's balance on trade in services",
-    subtitle = "Exports (credits) less imports (debits), 2005-2025",
+    subtitle = "Exports less imports, 2005-2025",
     caption  = paste0(
       ABS_SOURCE,
       "\nNote: a negative balance indicates imports exceed exports.",
@@ -1609,10 +1610,10 @@ fwrite(dt[order(flow, tab_no, year), .(flow, table, service, year,
 flow_meta <- list(
   Credits = list(colour = "#1F4E79",
                  title  = "US share of Australia's services exports",
-                 short  = "exports (credits)"),
+                 short  = "exports"),
   Debits  = list(colour = "#C0504D",
                  title  = "US share of Australia's services imports",
-                 short  = "imports (debits)")
+                 short  = "imports")
 )
 
 theme_dash <- theme_minimal(base_size = 11) +
@@ -1690,8 +1691,8 @@ p_ov <- ggplot(ov, aes(x = year, y = share, colour = flow)) +
              labeller = label_wrap_gen(width = 35)) +
   scale_colour_manual(values = c(Credits = flow_meta$Credits$colour,
                                  Debits  = flow_meta$Debits$colour),
-                      labels = c(Credits = "Exports to US (credits)",
-                                 Debits  = "Imports from US (debits)")) +
+                      labels = c(Credits = "Exports to the US",
+                                 Debits  = "Imports from the US")) +
   scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, NA)) +
   labs(title    = "US share of Australia's services trade, by service",
        subtitle = "United States as a share of total services flows in each direction",
@@ -2093,18 +2094,23 @@ fwrite(ov_wide, file.path(out_dir, "goods_overview_us_share_by_industry.csv"), b
 message("Done. Outputs written to: ", out_dir)
 
 # ------------------------------------------------------------------------------
-# US trade with Australia: exports each way and the US surplus
+# Australia's trade with the US: exports, imports and the US surplus
 # ------------------------------------------------------------------------------
 # Reuses data built above, so nothing new is downloaded:
 #   goods    - dfat_trade_by_country.csv (A$ thousand, calendar years)
 #   services - svc_cr / svc_db from section 4b (A$ million, calendar years)
+#   gold     - SITC 971 (non-monetary gold) from the DFAT pivot cache
 #
-# Seen from the US side:
-#   US exports to Australia      = Australia's imports from the US (above zero)
-#   Australian exports to the US = Australia's exports to the US (below zero)
-#   US trade surplus             = the difference
+# All from Australian data:
+#   au_exports = Australia's exports to the US (line)
+#   us_exports = Australia's imports from the US, i.e. US exports (line)
+#   surplus    = the US surplus, us_exports less au_exports (bars)
+#
+# Non-monetary gold moves with bullion flows (2020 and 2025 were large gold
+# years), so the surplus is also shown without it.
 
 INCLUDE_SERVICES <- TRUE   # FALSE for goods only
+GOLD_SITC <- "971"         # SITC 971 Gold, non-monetary (excl. ores and concentrates)
 
 is_us <- function(x) stri_detect_regex(x, "^United States( of America)?$")
 
@@ -2114,6 +2120,12 @@ goods_us <- read_csv("dfat_trade_by_country.csv", show_col_types = FALSE) |>
          value_bn = value_k / 1e6) |>
   group_by(year, flow) |>
   summarise(value_bn = sum(value_bn), .groups = "drop")
+
+gold_us <- as.data.frame(dfat) |>
+  filter(is_us(country), substr(sitc, 1, 3) == GOLD_SITC) |>
+  mutate(flow = if_else(flow == "Exports", "gold_au_exports", "gold_us_exports")) |>
+  group_by(year, flow) |>
+  summarise(value_bn = sum(value_k, na.rm = TRUE) / 1e6, .groups = "drop")
 
 us_balance <- goods_us
 
@@ -2133,57 +2145,73 @@ if (INCLUDE_SERVICES) {
     summarise(value_bn = sum(value_bn), .groups = "drop")
 }
 
-us_balance <- us_balance |>
-  tidyr::pivot_wider(names_from = flow, values_from = value_bn) |>
-  mutate(surplus = us_exports - au_exports) |>
+us_balance <- bind_rows(us_balance, filter(gold_us, year %in% us_balance$year)) |>
+  tidyr::pivot_wider(names_from = flow, values_from = value_bn, values_fill = 0) |>
+  mutate(surplus         = us_exports - au_exports,
+         surplus_ex_gold = (us_exports - gold_us_exports) - (au_exports - gold_au_exports)) |>
   arrange(year)
 
-balance_long <- bind_rows(
-  us_balance |> transmute(year, value =  us_exports, series = "US exports to Australia"),
-  us_balance |> transmute(year, value =  surplus,    series = "US trade surplus"),
-  us_balance |> transmute(year, value = -au_exports, series = "Australian exports to the US")
+flow_levels <- c("Australian exports to the US", "Australian imports from the US")
+flows_long <- bind_rows(
+  us_balance |> transmute(year, value = au_exports, series = flow_levels[1]),
+  us_balance |> transmute(year, value = us_exports, series = flow_levels[2])
 ) |>
-  mutate(series = factor(series, levels = c("US exports to Australia",
-                                            "US trade surplus",
-                                            "Australian exports to the US")))
+  mutate(series = factor(series, levels = flow_levels))
 
 # Drawn twice, in A$ and US$ (each calendar year at its average rate).
 make_us_balance <- function(cur) {
-balance_long <- balance_long |>
-  mutate(value = if (cur == "USD") aud_to_usd(value, fx_calendar_year(year)) else value)
-balance_latest <- balance_long |> filter(year == max(year))
+to_cur <- function(x, year) if (cur == "USD") aud_to_usd(x, fx_calendar_year(year)) else x
+flows <- flows_long |> mutate(value = to_cur(value, year))
+bal   <- us_balance |> mutate(across(c(surplus, surplus_ex_gold, gold_au_exports, au_exports),
+                                     ~ to_cur(.x, year)))
+flows_latest <- flows |> filter(year == max(year))
+bal_latest   <- bal |> filter(year == max(year))
 
 sym <- cur_sym[[cur]]
 bn_label <- function(x) ifelse(x < 0, paste0("-", sym, abs(x), "b"), paste0(sym, x, "b"))
 
-ggplot(balance_long, aes(year, value, colour = series)) +
+ggplot() +
+  geom_col(data = bal, aes(year, surplus, fill = "US trade surplus"), width = 0.7) +
+  geom_line(data = bal, aes(year, surplus_ex_gold, linetype = "US surplus excluding gold"),
+            colour = csis_colours[["grey"]], linewidth = 0.6) +
+  geom_point(data = bal, aes(year, surplus_ex_gold), shape = 21, size = 1.4,
+             colour = csis_colours[["grey"]], fill = "white") +
   geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.5) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 1.6) +
-  geom_text(data = balance_latest,
-            aes(label = bn_label(round(value, 1))),
+  geom_line(data = flows, aes(year, value, colour = series), linewidth = 1) +
+  geom_point(data = flows, aes(year, value, colour = series), size = 1.6) +
+  geom_text(data = flows_latest,
+            aes(year, value, colour = series, label = bn_label(round(value, 1))),
             hjust = -0.25, size = 3.6, family = "source_sans", show.legend = FALSE) +
-  scale_colour_manual(values = c(
-    "US exports to Australia"      = csis_colours[["navy"]],
-    "US trade surplus"             = csis_colours[["gold"]],
-    "Australian exports to the US" = csis_colours[["teal"]]
-  )) +
+  geom_text(data = bal_latest, aes(year, surplus, label = bn_label(round(surplus, 1))),
+            hjust = -0.3, size = 3.2, family = "source_sans", colour = "#8A6D00") +
+  annotate("text", x = bal_latest$year - 0.5, y = bal_latest$au_exports,
+           label = paste0("incl. ", bn_label(round(bal_latest$gold_au_exports, 1)), " of gold"),
+           hjust = 1, vjust = -0.6, size = 3, family = "source_sans",
+           colour = csis_colours[["navy"]]) +
+  scale_colour_manual(values = setNames(unname(csis_colours[c("navy", "red")]), flow_levels)) +
+  scale_fill_manual(values = c("US trade surplus" = "#F7D98B")) +
+  scale_linetype_manual(values = c("US surplus excluding gold" = "22")) +
   scale_y_continuous(labels = bn_label, breaks = scales::pretty_breaks(8)) +
   scale_x_continuous(breaks = scales::pretty_breaks(8),
                      expand = expansion(mult = c(0.01, 0.15))) +
+  guides(colour = guide_legend(order = 1), fill = guide_legend(order = 2),
+         linetype = guide_legend(order = 3)) +
   labs(
-    title    = "US exports to Australia, Australian exports to the US and the US surplus",
+    title    = "Australia's trade with the United States",
     subtitle = paste0(if (INCLUDE_SERVICES) "Goods and services" else "Goods",
-                      " trade between the US and Australia, calendar years, ", sym, " billion"),
+                      ", Australian data, calendar years, ", sym, " billion"),
     x = NULL, y = NULL,
     caption  = paste0(
       "Sources: DFAT country and commodity pivot table (ABS cat. 5368.0)",
       if (INCLUDE_SERVICES) "; ABS, International Trade: Supplementary Information, Calendar Year" else "",
-      ".\nAustralian exports to the US shown below zero. US surplus = US exports less Australian exports.",
+      ".\nUS surplus = Australian imports from the US less Australian exports to the US.",
+      "\nExcluding gold removes SITC 971 (non-monetary gold) from both exports and imports.",
       if (cur == "USD") fx_note[["USD"]] else ""
     )
   ) +
-  theme_csis()
+  theme_csis() +
+  theme(legend.box = "vertical", legend.box.just = "left",
+        legend.spacing.y = unit(0, "pt"), legend.margin = margin(0, 0, 0, 0))
 }
 
 save_both(make_us_balance, "us_au_trade_balance.png", save_csis)
@@ -2194,5 +2222,137 @@ write_csv(us_balance |>
                    us_exports_usd = us_exports * usd_per_aud,
                    surplus_usd    = surplus * usd_per_aud),
           "us_au_trade_balance_tidy.csv")
+
+local({
+  last <- us_balance[nrow(us_balance), ]; prev <- us_balance[nrow(us_balance) - 1, ]
+  line <- function(cur) {
+    k <- if (cur == "USD") fx_calendar_year(c(last$year, prev$year)) else c(1, 1)
+    s <- cur_sym[[cur]]
+    sprintf(paste("Exports to the US rose from %s to %s in %d, and %s of the rise was non-monetary gold.",
+                  "The US surplus was %s, or %s excluding gold."),
+            fmt_bn(prev$au_exports * k[2], s), fmt_bn(last$au_exports * k[1], s), last$year,
+            fmt_bn(last$gold_au_exports * k[1] - prev$gold_au_exports * k[2], s),
+            fmt_bn(last$surplus * k[1], s), fmt_bn(last$surplus_ex_gold * k[1], s))
+  }
+  takeaway("Trade/us_au_trade_balance.png", line("AUD"), line("USD"))
+})
+
+
+# ------------------------------------------------------------------------------
+# Top ten goods traded with the US, each way, in plain names
+# ------------------------------------------------------------------------------
+# The default view of the Trade in goods page, before the full SITC list.
+# DFAT's SITC labels are abbreviated ("Beef, f.c.f."), so they are spelled out.
+# SITC 988 (confidential items) is not a product and is left out.
+
+plain_sitc <- function(x) {
+  x <- sub("^\\d{3}\\s+", "", x)
+  x <- gsub("\\bf\\.c\\.f\\.?", "fresh, chilled or frozen", x)
+  x <- gsub("\\bnes\\b|\\bn\\.e\\.s\\.?", "not elsewhere specified", x)
+  x <- gsub("\\bexcl\\b\\.?", "excluding", x)
+  x <- gsub("\\bincl\\b\\.?", "including", x)
+  x <- gsub("\\bmfrs\\b\\.?", "manufactures", x)
+  x <- gsub("\\bequip\\b\\.?", "equipment", x)
+  x <- gsub("\\bPharm\\b", "Pharmaceutical", x)
+  x <- gsub(" & ", " and ", x)
+  x <- sub("^Misc ", "Miscellaneous ", x)
+  x <- gsub("^Gold$", "Gold (non-monetary)", x)
+  x
+}
+
+top_yr <- max(us_vs_all$year)
+top10 <- as.data.frame(us_vs_all) |>
+  filter(year == top_yr, industry != "Total goods", !grepl("^988", industry)) |>
+  group_by(flow) |>
+  slice_max(us_m, n = 10, with_ties = FALSE) |>
+  ungroup() |>
+  mutate(product = plain_sitc(industry),
+         flow = recode(flow, Exports = "Australian exports to the US",
+                       Imports = "Australian imports from the US"))
+write_csv(top10 |> select(flow, industry, product, year, us_m, total_m), "goods_top10_us.csv")
+
+make_top10 <- function(cur) {
+  k <- if (cur == "USD") fx_calendar_year(top_yr) else 1
+  d <- top10 |>
+    mutate(v = us_m * k / 1000,
+           product = stringr::str_wrap(product, 34),
+           key = paste(flow, product, sep = "||"),
+           key = reorder(key, v))
+  ggplot(d, aes(v, key, fill = flow)) +
+    geom_col(width = 0.7, show.legend = FALSE) +
+    geom_text(aes(label = sprintf("%s%.1fbn", cur_sym[[cur]], v)), hjust = -0.1, size = 3,
+              family = "source_sans", colour = csis_colours[["grey"]]) +
+    facet_wrap(~flow, scales = "free", ncol = 2) +
+    scale_y_discrete(labels = function(x) sub("^.*\\|\\|", "", x)) +
+    scale_fill_manual(values = c("Australian exports to the US" = csis_colours[["navy"]],
+                                 "Australian imports from the US" = csis_colours[["red"]])) +
+    scale_x_continuous(labels = function(x) paste0(cur_sym[[cur]], x, "bn"),
+                       expand = expansion(mult = c(0, 0.3))) +
+    labs(title = "Top ten goods traded with the United States",
+         subtitle = sprintf("Value by product (SITC 3-digit), calendar %d, %s billion", top_yr, cur_sym[[cur]]),
+         caption = paste0("Source: DFAT country and commodity pivot table (ABS cat. 5368.0). ",
+                          "Confidential items (SITC 988) are not shown.",
+                          if (cur == "USD") fx_note[["USD"]] else ""),
+         x = NULL, y = NULL) +
+    theme_csis() +
+    theme(panel.grid.major.y = element_blank(),
+          panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4),
+          strip.text = element_text(face = "bold", hjust = 0, colour = csis_colours[["navy"]]))
+}
+save_both(make_top10, "goods_top10_us.png", save_csis, width = 11, height = 6)
+
+# ------------------------------------------------------------------------------
+# Takeaways under each Trade chart
+# ------------------------------------------------------------------------------
+local({
+  tr <- function(file) file.path("Trade", file)
+  bc <- read_csv("dfat_trade_by_country.csv", show_col_types = FALSE)
+  rank_line <- function(tt, verb) {
+    d <- bc |> filter(trade_type == tt, year == max(year)) |> arrange(desc(value_k)) |>
+      mutate(rank = row_number())
+    us <- d |> filter(is_us(country))
+    sprintf("The United States was Australia's %s %s partner in %d, with %.1f%% of Australia's goods %ss; China was first with %.1f%%.",
+            c("largest", "second-largest", "third-largest", "fourth-largest", "fifth-largest")[min(us$rank, 5)],
+            verb, max(d$year), 100 * us$value_k / us$total_k, verb,
+            100 * d$value_k[d$country == "China"] / d$total_k[1])
+  }
+  takeaway(tr("dfat_exports_partners_long.png"), rank_line("Total Exports", "export"))
+  takeaway(tr("dfat_imports_partners_long.png"), rank_line("Total Imports", "import"))
+  sec <- read_csv("dfat_sector_by_year.csv", show_col_types = FALSE) |> filter(year == max(year))
+  mf <- sec |> filter(trade_type == "Total Exports", grepl("Minerals", sector))
+  takeaway(tr("dfat_sector_composition_both.png"), sprintf(
+    "Minerals and fuels made up %.0f%% of Australia's goods exports in %d.", 100 * mf$value_k / mf$total_k, mf$year))
+  mi <- sec |> filter(trade_type == "Total Imports") |> arrange(desc(value_k))
+  takeaway(tr("dfat_import_shares_by_sector.png"), sprintf(
+    "%s made up the largest share of Australia's goods imports in %d (%.0f%%).",
+    mi$sector[1], mi$year[1], 100 * mi$value_k[1] / mi$total_k[1]))
+  sb <- read_csv("abs_services_balance_tidy.csv", show_col_types = FALSE) |> arrange(year)
+  sbl <- sb[nrow(sb), ]
+  line_sb <- function(cur) {
+    v <- if (cur == "USD") sbl$value * fx_calendar_year(sbl$year) else sbl$value
+    sprintf("Australia imported %s more services than it exported in %d.", fmt_bn(abs(v), cur_sym[[cur]]), sbl$year)
+  }
+  if (sbl$value < 0) takeaway(tr("abs_services_balance.png"), line_sb("AUD"), line_sb("USD"))
+  si <- read_csv("abs_services_imports_by_country.csv", show_col_types = FALSE) |>
+    filter(!grepl("APEC|OECD|ASEAN|EU|European|G20|Total", country)) |> arrange(desc(value_m))
+  takeaway(tr("services_imports_us.png"), sprintf(
+    "The United States supplied %.1f%% of Australia's services imports in %d%s.",
+    si$share[grepl("^United States", si$country)][1], svc_imp_year,
+    if (grepl("^United States", si$country[1])) ", more than any other country" else ""))
+  us_svc <- fread("us_share_services_all.csv")[service == "Total services" & year == max(year)]
+  takeaway(tr("overview_us_share_by_service.png"), sprintf(
+    "The United States took %.0f%% of Australia's services exports and supplied %.0f%% of its services imports in %d.",
+    us_svc[flow == "Credits", us_share_pct], us_svc[flow == "Debits", us_share_pct], us_svc$year[1]))
+  t10 <- top10 |> group_by(flow) |> slice_max(us_m, n = 1) |> ungroup()
+  line_t10 <- function(cur) {
+    k <- if (cur == "USD") fx_calendar_year(top_yr) else 1
+    sprintf("%s was Australia's largest export to the US in %d (%s) and %s its largest import from the US (%s).",
+            t10$product[t10$flow == "Australian exports to the US"], top_yr,
+            fmt_bn(t10$us_m[t10$flow == "Australian exports to the US"] * k / 1000, cur_sym[[cur]]),
+            tolower(t10$product[t10$flow == "Australian imports from the US"]),
+            fmt_bn(t10$us_m[t10$flow == "Australian imports from the US"] * k / 1000, cur_sym[[cur]]))
+  }
+  takeaway(tr("goods_top10_us.png"), line_t10("AUD"), line_t10("USD"))
+})
 
 rm(list = ls())

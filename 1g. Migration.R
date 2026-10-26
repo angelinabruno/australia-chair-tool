@@ -732,3 +732,50 @@ write_csv(lca_occ |> mutate(group = as.character(group)), "e3_jobs_by_occupation
 write_csv(emp_city |> mutate(item = sub("___.*$", "", as.character(item))), "e3_employers_cities_tidy.csv")
 
 message("Done - five two-way flow charts written to ", getwd())
+
+
+# ------------------------------------------------------------------------------
+# Takeaways under each chart (read back from the tidy CSVs written above)
+# ------------------------------------------------------------------------------
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Takeaways.R"))
+local({
+  mg <- function(file) file.path("Migration", file)
+  rd <- function(f) utils::read.csv(f, stringsAsFactors = FALSE)
+  v <- rd("visas_issued_australians_tidy.csv")
+  e3 <- aggregate(visas ~ fy, v[grepl("^E3", v$class), ], sum); e3 <- e3[order(e3$fy), ]
+  takeaway(mg("e3_visas_australians.png"), sprintf(
+    "The US issued %s E-3 skilled professional visas to Australians and their families in fiscal year %d.",
+    format(e3$visas[nrow(e3)], big.mark = ","), e3$fy[nrow(e3)]))
+  se <- aggregate(visas ~ fy, v[grepl("^(F|J|M)", v$class), ], sum); se <- se[order(se$fy), ]
+  if (nrow(se)) takeaway(mg("student_exchange_visas_australians.png"), sprintf(
+    "Australians received %s US student and exchange visas in fiscal year %d.",
+    format(se$visas[nrow(se)], big.mark = ","), se$fy[nrow(se)]))
+  oc <- rd("e3_jobs_by_occupation_tidy.csv"); oc <- oc[order(-oc$lcas), ]
+  takeaway(mg("e3_jobs_by_occupation.png"), sprintf(
+    "%s jobs made up %.0f%% of US jobs certified for Australian skilled professionals.",
+    oc$group[1], 100 * oc$share[1]))
+  tr <- rd("e3_jobs_trend_tidy.csv"); tt <- aggregate(lcas ~ fy, tr, sum); tt <- tt[order(tt$fy), ]
+  takeaway(mg("e3_jobs_trend.png"), sprintf(
+    "US employers had %s jobs certified for Australian skilled professionals in fiscal year %d, against %s in %d.",
+    format(tt$lcas[nrow(tt)], big.mark = ","), tt$fy[nrow(tt)], format(tt$lcas[1], big.mark = ","), tt$fy[1]))
+  ec <- rd("e3_employers_cities_tidy.csv")
+  emp <- ec[ec$panel == ec$panel[1], ]; emp <- emp[order(-emp$lcas), ]
+  takeaway(mg("e3_employers_cities.png"), sprintf(
+    "%s certified the most jobs for Australian skilled professionals (%d), followed by %s and %s.",
+    emp$item[1], emp$lcas[1], emp$item[2], emp$item[3]))
+  sk <- rd("us_citizens_skilled_visas_occupation_tidy.csv"); sk <- sk[order(-sk$holders), ]
+  takeaway(mg("us_citizens_skilled_visas_occupation.png"), sprintf(
+    "%s are the most common occupation among Americans on skilled visas in Australia (%d holders).",
+    sk$occupation[1], sk$holders[1]))
+  tv <- rd("us_citizens_temporary_visas_tidy.csv"); tl <- tv[tv$snapshot == max(tv$snapshot), ]
+  tl <- tl[order(-tl$holders), ]
+  takeaway(mg("us_citizens_temporary_visas.png"), sprintf(
+    "%s Americans held temporary visas in Australia at %s; the largest group (%s) held %s visas.",
+    format(sum(tl$holders), big.mark = ","), format(as.Date(tl$snapshot[1]), "%d %B %Y"),
+    format(tl$holders[1], big.mark = ","), tolower(tl$group[1])))
+  nm <- rd("abs_nom_usa_born.csv"); nm <- nm[nm$region == "Australia", ]; nm <- nm[order(nm$fy_end), ]
+  takeaway(mg("nom_usa_national.png"), sprintf(
+    "Net overseas migration of US-born people to Australia was %s in %s%s.",
+    format(nm$value[nrow(nm)], big.mark = ","), nm$period[nrow(nm)],
+    if (isTRUE(nm$preliminary[nrow(nm)])) " (preliminary)" else ""))
+})
