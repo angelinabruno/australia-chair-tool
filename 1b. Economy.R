@@ -428,7 +428,6 @@ IND_GROUPS <- tribble(
   "Arts and recreation",                          "R",
   "Other services",                               "S"
 )
-NON_MARKET <- c("Public administration and defence", "Education", "Health and social work")
 
 group_value <- function(d, parts) {
   v <- function(a) { x <- d$value[d$activity == a]; if (length(x)) x else 0 }
@@ -486,39 +485,6 @@ p_ind <- ind_share |>
 
 save_plot(p_ind, "industry_shares_au_us.png", width = 8.5, height = 8)
 readr::write_csv(ind_share |> mutate(year = ind_yr, australia_year = au_yr_lab), "industry_shares_au_us.csv")
-
-# Market and non-market: the OECD productivity-statistics convention, with
-# public administration, education and health (ISIC O, P, Q) as non-market.
-mkt <- ind_share |>
-  mutate(part = if_else(group %in% NON_MARKET, "Non-market (public administration, education, health)",
-                        "Market (all other industries)")) |>
-  group_by(country, part) |>
-  summarise(share = sum(share), .groups = "drop") |>
-  mutate(part = factor(part, levels = c("Non-market (public administration, education, health)",
-                                        "Market (all other industries)")),
-         country = factor(country, levels = c("United States", "Australia")))
-p_mkt <- ggplot(mkt, aes(share, country, fill = part)) +
-  geom_col(width = 0.55) +
-  geom_text(aes(label = sprintf("%.0f%%", share)), position = position_stack(vjust = 0.5),
-            size = 3.6, family = "source_sans", colour = "white", fontface = "bold") +
-  scale_fill_manual(values = c("Market (all other industries)" = csis_colours[["navy"]],
-                               "Non-market (public administration, education, health)" = csis_colours[["teal"]]),
-                    breaks = c("Market (all other industries)",
-                               "Non-market (public administration, education, health)")) +
-  scale_x_continuous(labels = label_percent(scale = 1), expand = expansion(c(0, 0.01))) +
-  guides(fill = guide_legend(ncol = 1)) +
-  labs(title = "Market and non-market shares of the economy, Australia and the United States",
-       subtitle = sprintf("Share of value added excluding owner-occupied housing, %d (Australia %s)", ind_yr, au_yr_lab),
-       x = NULL, y = NULL,
-       caption = paste0("Source: OECD National Accounts (Table 6A, ISIC Rev.4). Non-market = ISIC O, P and Q, ",
-                        "as in OECD productivity statistics.\nThis is a split by activity, not ownership: ",
-                        "private schools and hospitals count as non-market, and government businesses\n",
-                        "(e.g. postal, water) as market. OECD sector accounts have US but not Australian ",
-                        "general government value added.")) +
-  theme_csis() +
-  theme_bars
-
-save_plot(p_mkt, "market_nonmarket_au_us.png", width = 8.5, height = 3.6)
 
 
 # Contributions to through-the-year growth: each group's 4-quarter change over
@@ -864,8 +830,4 @@ local({
     "Mining is %.0f%% of Australia's economy (excluding housing) against %.1f%% in the US; the US share is larger most of all in %s (%.0f%% vs %.0f%%).",
     w$Australia[w$group == "Mining"], w$`United States`[w$group == "Mining"],
     tolower(w$group[nrow(w)]), w$`United States`[nrow(w)], w$Australia[nrow(w)]))
-  nm <- mkt |> filter(grepl("^Non-market", part))
-  takeaway(ec("market_nonmarket_au_us.png"), sprintf(
-    "Public administration, education and health make up %.1f%% of value added in Australia and %.1f%% in the US (%d).",
-    nm$share[nm$country == "Australia"], nm$share[nm$country == "United States"], ind_yr))
 })
