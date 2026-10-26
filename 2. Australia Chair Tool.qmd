@@ -183,7 +183,7 @@ cat(paste0(
   '<div class="ov-grid">', paste(tiles, collapse = ""), '</div></section>',
   '<section class="ov-section"><h2 class="ov-h2">Across the Pacific</h2>',
   '<p class="ov-sub">Two continent-sized countries, almost 16,000 kilometres apart from Canberra to Washington.</p>', maps, '</section>',
-  '<p class="ov-sources">Sources: ABS, DFAT, US Bureau of Economic Analysis, USGS, Geoscience Australia, IRENA, AEMO, CAISO, ERCOT, IP Australia, OpenAlex and DCCEEW.</p>',
+  '<p class="ov-sources">Sources: ABS, DFAT, US Bureau of Economic Analysis, USGS, Geoscience Australia, IRENA, AEMO, CAISO, ERCOT, EIA, IP Australia, OpenAlex and DCCEEW.</p>',
   '</div>',
   # Make the tiles and numbers switch dashboard pages like the top navigation does
   '<script>document.addEventListener("click", function (e) {',
@@ -720,19 +720,27 @@ map
 
 ![](Energy/02_state_fuel_mix.png){title="Generation mix by state, 2025"}
 
+### US data centre states
+
+![](Energy/08_us_state_fuel_mix.png){title="Generation mix in US data centre states"}
+
 ### Fuel mix over time
 
-![](Energy/01_fuel_mix_timeseries.png){title="Generation by fuel, 1989-90 to 2024-25"}
+![](Energy/01_fuel_mix_timeseries.png){title="Share of generation by fuel over time, Australia and the US"}
 
-### Primary energy vs electricity
+### Generation by fuel vs US
 
-![](Energy/03_primary_vs_electricity.png){title="Primary energy vs electricity"}
+![](Energy/03_primary_vs_electricity.png){title="Electricity generation by fuel, Australia and the United States"}
 
 ## Column {.tabset width="50%" title="Renewables, costs and prices"}
 
 ### Renewables vs target
 
 ![](Energy/04_renewables_vs_target.png){title="Renewable share against the 82% by 2030 target"}
+
+### Renewables vs US
+
+![](Energy/09_renewable_share_au_us.png){title="Renewable share of generation, Australia and the United States"}
 
 ### Renewables by technology
 
@@ -750,8 +758,8 @@ map
 
 <div class="dc-text">
 
-- **Primary energy.** All energy used before it is converted: coal, oil, gas and renewables, including fuel burnt in cars and factories. Electricity is only part of it.
-- **Generation mix.** The share of electricity produced from each fuel. Rooftop solar is counted even though it is not sold through the grid.
+- **Generation mix.** The share of electricity produced from each fuel. Rooftop (small-scale) solar is counted for both countries, even though it is not sold through the grid; the US state chart is the exception, as EIA's state file leaves it out.
+- **Renewables.** Hydro, wind, solar, bioenergy and geothermal. Nuclear is low-carbon but not renewable.
 - **LCOE.** Levelised cost of electricity: the lifetime cost of building and running a new plant, divided by the electricity it produces (per MWh). It compares technologies and countries on the same basis.
 - **Wholesale price.** The price generators are paid in the spot market, before network charges and retail margins. Real-time prices are set close to delivery; day-ahead prices a day before.
 - **NEM.** The National Electricity Market, covering Queensland, New South Wales, the ACT, Victoria, South Australia and Tasmania. Western Australia and the Northern Territory have separate grids.
