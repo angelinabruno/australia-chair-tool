@@ -243,3 +243,16 @@ $border-radius:           6px;
 .ov .ov-stats { display: grid !important; height: auto !important; }
 .ov .ov-section { display: block !important; clear: both; }
 @media (max-width: 640px) { .chart-takeaway { font-size: 0.78rem; } }
+
+// ---- "How to read this page" link and pop-up (theme/page-guides.html) ---------
+.card-header { position: relative; }
+.page-guide-link {
+  position: absolute; top: 8px; right: 12px;
+  background: none; border: 0; padding: 0;
+  font-size: 0.78rem; color: $muted; cursor: pointer;
+}
+.page-guide-link:hover, .page-guide-link:focus-visible { color: $navy; text-decoration: underline; }
+#page-guide-modal .modal-title { font-size: 1.1rem; color: $navy; }
+#page-guide-modal .page-guide-body { font-size: 0.92rem; line-height: 1.5; }
+#page-guide-modal .page-guide-body li { margin-bottom: 6px; }
+@media (max-width: 640px) { .page-guide-link { position: static; display: block; margin-top: 4px; } }
