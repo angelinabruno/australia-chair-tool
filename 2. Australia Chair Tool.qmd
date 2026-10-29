@@ -183,8 +183,6 @@ cat(paste0(
   '<section class="ov-section"><h2 class="ov-h2">Explore the relationship</h2>',
   '<p class="ov-sub">Each section opens a page of charts drawn from official US and Australian data.</p>',
   '<div class="ov-grid">', paste(tiles, collapse = ""), '</div></section>',
-  '<section class="ov-section"><h2 class="ov-h2">Across the Pacific</h2>',
-  '<p class="ov-sub">Two continent-sized countries, almost 16,000 kilometres apart from Canberra to Washington.</p>', maps, '</section>',
   '<p class="ov-sources">Sources: ABS, DFAT, US Bureau of Economic Analysis, USGS, Geoscience Australia, IRENA, AEMO, CAISO, ERCOT, EIA, IP Australia, OpenAlex and DCCEEW.</p>',
   '</div>',
   # Make the tiles and numbers switch dashboard pages like the top navigation does
@@ -193,6 +191,22 @@ cat(paste0(
   '  var nav = document.querySelector(\'.navbar .nav-link[href="#\' + a.dataset.page + \'"]\');',
   '  if (nav) { e.preventDefault(); nav.click(); window.scrollTo(0, 0); }',
   '});</script>'
+))
+```
+:::
+
+# Geography {scrolling="true"}
+
+::: {.card .ov-card}
+```{r}
+#| echo: false
+#| output: asis
+# The maps and land, coastline and population table are built in the Overview chunk above
+cat(paste0(
+  '<div class="ov">',
+  '<section class="ov-section"><h2 class="ov-h2">Across the Pacific</h2>',
+  '<p class="ov-sub">Two continent-sized countries, almost 16,000 kilometres apart from Canberra to Washington.</p>', maps, '</section>',
+  '</div>'
 ))
 ```
 :::
