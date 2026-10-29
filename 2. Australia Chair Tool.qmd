@@ -701,7 +701,7 @@ map
 
 ### By state
 
-![](Energy/02_state_fuel_mix.png){title="Generation mix by state, Australia and the main US data centre states"}
+![](Energy/02_state_fuel_mix.png){title="Electricity generation mix by state"}
 
 ### Data centre demand
 

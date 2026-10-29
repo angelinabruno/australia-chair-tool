@@ -395,20 +395,20 @@ stopifnot(!anyNA(us_small$gwh))
 state_mix <- bind_rows(
   state_2025 |> filter(region != "AUS") |>
     transmute(group = "Australia
-(calendar 2025)", place = region,
+2025", place = region,
               fuel = to_cmp(fuel), gwh),
   state_2025 |> filter(region == "AUS") |>
     transmute(group = "Australia
-(calendar 2025)", place = "Australia",
+2025", place = "Australia",
               fuel = to_cmp(fuel), gwh),
   us_states |> filter(year == st_year) |>
     transmute(group = sprintf("Main US data
 centre states
-(calendar %d)", st_year),
+%d", st_year),
               place = DC_STATES[state], fuel, gwh = mwh / 1000),
   us_small |> transmute(group = sprintf("Main US data
 centre states
-(calendar %d)", st_year),
+%d", st_year),
                         place = DC_STATES[state], fuel, gwh)
 ) |>
   group_by(group, place, fuel) |> summarise(gwh = sum(gwh), .groups = "drop") |>
@@ -433,8 +433,8 @@ p2 <- ggplot(state_mix, aes(share, label, fill = fuel)) +
   scale_x_continuous(labels = percent_format(accuracy = 1), expand = c(0, 0), limits = c(0, 1.09)) +
   guides(fill = guide_legend(nrow = 2)) +
   labs(
-    title    = "Electricity generation mix by state, Australia and the main US data centre states",
-    subtitle = "Share of generation by fuel, including rooftop solar. Right-hand figure is renewable share.",
+    title    = "Electricity generation mix by state",
+    subtitle = "Share of generation by fuel, calendar years, including rooftop solar. Right-hand figure is renewable share.",
     x = NULL, y = NULL,
     caption  = paste0("Sources: DCCEEW, Australian Energy Statistics, Table O (calendar 2025); EIA, Electric Power ",
                       "Annual, net generation by state and Table 3.21\n(small-scale solar), calendar ", st_year,
