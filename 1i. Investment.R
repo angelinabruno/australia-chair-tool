@@ -113,7 +113,8 @@ pick     <- function(prefix) {
                          paste(basename(inside), collapse = ", "))
   hit[1]
 }
-tab_files <- c(foreign = pick("5352002"), abroad = pick("5352005"))
+tab_files <- c(foreign = pick("5352002"), abroad = pick("5352005"),
+               ind_foreign = pick("53520015"), ind_abroad = pick("53520017"))
 unzip(zip_file, files = tab_files, exdir = RAW_DIR, junkpaths = TRUE)
 tab_paths <- file.path(RAW_DIR, basename(tab_files))
 names(tab_paths) <- names(tab_files)
@@ -418,6 +419,118 @@ make_iip_type <- function(cur) {
 }
 
 save_both(make_iip_type, file.path(OUT_DIR, "iip_by_type_latest.png"),
+          function(p, f) ggsave(f, p, width = 10, height = 5.5, dpi = 300, bg = "white"))
+
+# ------------------------------------------------------------------------------
+# 4b. Direct investment by broad industry
+# ------------------------------------------------------------------------------
+# Tables 15a and 17a: the level of direct investment at 31 December by ANZSIC
+# division, for all partner countries together (the ABS does not publish
+# industry by partner). Divisions are grouped into broad sectors; values the
+# ABS does not publish (np) are counted in "Unallocated or not published",
+# which is the published total less the published sectors.
+SECTOR_OF <- c(
+  "Mining" = "Mining",
+  "Manufacturing" = "Manufacturing",
+  "Financial and Insurance Services" = "Finance and insurance",
+  "Rental, Hiring and Real Estate Services" = "Real estate",
+  "Wholesale and Retail Trade" = "Wholesale and retail trade",
+  "Electricity, Gas, Water and Waste Services" = "Utilities, transport and construction",
+  "Transport, Postal and Warehousing" = "Utilities, transport and construction",
+  "Construction" = "Utilities, transport and construction",
+  "Information Media and Telecommunications" = "Information, professional and other services",
+  "Professional, Scientific and Technical Services" = "Information, professional and other services",
+  "Administrative and Support Services" = "Information, professional and other services",
+  "Accommodation and Food Services" = "Information, professional and other services",
+  "Health Care and Social Assistance" = "Information, professional and other services",
+  "Education and Training" = "Information, professional and other services",
+  "Arts and Recreation Services" = "Information, professional and other services",
+  "Other Services" = "Information, professional and other services",
+  "Public Administration and Safety" = "Information, professional and other services",
+  "Agriculture, Forestry and Fishing" = "Agriculture, forestry and fishing"
+)
+UNALLOC <- "Unallocated or not published"
+
+read_by_industry <- function(path) {
+  g <- as.matrix(suppressMessages(read_excel(path, sheet = 2, col_names = FALSE,
+                                             col_types = "text", .name_repair = "minimal")))
+  # Years are in the row headed "Industry" (some values look like Excel dates)
+  yr_row <- which(trimws(g[, 1]) == "Industry")[1]
+  yrs    <- suppressWarnings(as.integer(g[yr_row, ]))
+  col    <- which(yrs == max(yrs, na.rm = TRUE))[1]
+  d <- data.frame(industry = trimws(g[, 1]), value_m = abs(cell_num(g[, col])),
+                  year = max(yrs, na.rm = TRUE))
+  total <- d$value_m[which(d$industry == "Total")[1]]
+  stopifnot("Industry total not found" = length(total) == 1 && !is.na(total))
+  s <- d |>
+    filter(industry %in% names(SECTOR_OF), !is.na(value_m)) |>
+    mutate(sector = unname(SECTOR_OF[industry])) |>
+    group_by(sector, year) |>
+    summarise(value_m = sum(value_m), .groups = "drop")
+  bind_rows(s, data.frame(sector = UNALLOC, year = s$year[1], value_m = total - sum(s$value_m)))
+}
+
+by_ind <- bind_rows(
+  read_by_industry(tab_paths[["ind_foreign"]]) |> mutate(direction = "Direct investment in Australia"),
+  read_by_industry(tab_paths[["ind_abroad"]])  |> mutate(direction = "Australian direct investment abroad")
+) |>
+  mutate(value_bn = value_m / 1000,
+         usd_per_aud = fx_on(as.Date(paste0(year, "-12-31"))))
+stopifnot("Industry tables 15 and 17 not read" = n_distinct(by_ind$direction) == 2)
+write.csv(by_ind, file.path(OUT_DIR, "iip_direct_by_industry_latest.csv"), row.names = FALSE)
+
+# Sectors in order of their total across both directions, the remainder last
+sector_order <- by_ind |>
+  filter(sector != UNALLOC) |>
+  group_by(sector) |> summarise(v = sum(value_bn), .groups = "drop") |>
+  arrange(v) |> pull(sector)
+sector_order <- c(UNALLOC, sector_order)
+
+make_iip_industry <- function(cur) {
+  d <- by_ind |>
+    mutate(value_bn  = if (cur == "USD") value_bn * usd_per_aud else value_bn,
+           sector    = factor(sector, levels = sector_order),
+           shade     = sector == UNALLOC,
+           direction = factor(direction, levels = c("Direct investment in Australia",
+                                                    "Australian direct investment abroad")))
+  ggplot(d, aes(value_bn, sector, fill = shade)) +
+    geom_col(width = 0.7) +
+    geom_text(aes(label = sprintf("%s%.0fbn", cur_sym[[cur]], value_bn)), hjust = -0.12,
+              size = 3, family = font_family, colour = csis_grey) +
+    facet_wrap(~direction, ncol = 2) +
+    scale_fill_manual(values = c(`FALSE` = csis_navy, `TRUE` = "#B1B3B3"), guide = "none") +
+    scale_x_continuous(labels = dollar_format(prefix = cur_sym[[cur]], suffix = "bn", big.mark = ","),
+                       breaks = scales::breaks_pretty(n = 3),
+                       expand = expansion(mult = c(0, 0.22))) +
+    labs(
+      title    = sprintf("Direct investment by industry, %d", unique(by_ind$year)[1]),
+      subtitle = sprintf("Level of direct investment at 31 December %d, all partner countries, %s billion",
+                         unique(by_ind$year)[1], cur_sym[[cur]]),
+      caption  = paste0("Source: ABS, International Investment Position, Australia: Supplementary Statistics, Tables 15a and 17a",
+                        " (industry of the Australian enterprise, ANZSIC divisions).",
+                        "\nThe ABS does not publish industry by partner country, so this covers all countries, not just the US.",
+                        " Direct investment only.",
+                        "\nUnallocated or not published = the total less the industries the ABS publishes.",
+                        if (cur == "USD") "\nConverted to US$ at the RBA exchange rate on 31 December." else ""),
+      x = NULL, y = NULL
+    ) +
+    theme_minimal(base_size = 12, base_family = font_family) +
+    theme(
+      plot.title         = element_text(face = "bold", colour = csis_navy, size = rel(1.2)),
+      plot.subtitle      = element_text(colour = csis_grey, margin = margin(b = 8)),
+      plot.caption       = element_text(colour = csis_grey, hjust = 0, size = rel(0.75)),
+      plot.title.position   = "plot",
+      plot.caption.position = "plot",
+      strip.text         = element_text(face = "bold", colour = csis_navy, hjust = 0),
+      panel.spacing.x    = unit(2.5, "lines"),
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor   = element_blank(),
+      axis.text          = element_text(colour = csis_grey),
+      plot.margin        = margin(10, 25, 10, 10)
+    )
+}
+
+save_both(make_iip_industry, file.path(OUT_DIR, "iip_direct_by_industry_latest.png"),
           function(p, f) ggsave(f, p, width = 10, height = 5.5, dpi = 300, bg = "white"))
 
 # ------------------------------------------------------------------------------
