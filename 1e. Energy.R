@@ -552,7 +552,7 @@ ggsave("09_renewable_share_au_us.png", p9, width = 9, height = 5.4, dpi = 150, b
 
 
 # ------------------------------------------------------------------------------
-# 6. CHART 4 - the 82% target
+# 6. CHART 4 - targets: Australia's 82% and the former US 2035 goal
 #
 # So what: the Commonwealth target is 82% renewable electricity by 2030.
 # Realised share against the straight line to that target is the single most
@@ -569,37 +569,60 @@ renew_hist <- gen_fy |>
 last_pt     <- slice_max(renew_hist, year)
 target_line <- tibble(year = c(last_pt$year, 2030), share = c(last_pt$share, 0.82))
 
-p4 <- ggplot(renew_hist, aes(year, share)) +
-  geom_line(colour = "#1baf7a", linewidth = 1.1) +
-  geom_line(data = target_line, linetype = "22", colour = "grey45", linewidth = 0.8) +
-  geom_point(data = last_pt, colour = "#1baf7a", size = 3) +
-  geom_point(data = tibble(year = 2030, share = 0.82),
-             shape = 21, fill = "white", colour = "grey30", size = 3) +
-  annotate("text", x = 2029.6, y = 0.82, label = "82% by 2030\npolicy target",
-           hjust = 1, vjust = 0.4, size = 3.1, colour = "grey30", lineheight = 0.95) +
-  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 0.9)) +
-  scale_x_continuous(breaks = seq(2000, 2030, 5)) +
+# The US has no current national target. The closest equivalent is the former
+# federal goal of 100% carbon pollution-free electricity by 2035 (set in 2021,
+# reversed by executive order in January 2025). It counted nuclear as well as
+# renewables, so it is set against the US renewables-plus-nuclear share.
+us_lowc <- mix_ts |>
+  filter(country == "United States", year >= 2000) |>
+  group_by(year) |>
+  summarise(share = sum(share[fuel %in% c(CMP_RENEW, "Nuclear")]), .groups = "drop")
+us_last_pt <- slice_max(us_lowc, year)
+us_goal    <- tibble(year = c(us_last_pt$year, 2035), share = c(us_last_pt$share, 1))
+
+tgt_cols <- c("Australia: renewables" = "#00205B",
+              "United States: renewables plus nuclear" = "#D2232A")
+p4 <- ggplot() +
+  geom_line(data = renew_hist |> mutate(s = "Australia: renewables"),
+            aes(year, share, colour = s), linewidth = 1.1) +
+  geom_line(data = us_lowc |> mutate(s = "United States: renewables plus nuclear"),
+            aes(year, share, colour = s), linewidth = 1.1, linetype = "22") +
+  geom_line(data = target_line, aes(year, share), linetype = "11", colour = "#00205B", linewidth = 0.6) +
+  geom_line(data = us_goal, aes(year, share), linetype = "11", colour = "#D2232A", linewidth = 0.6, alpha = 0.6) +
+  geom_point(data = tibble(year = 2030, share = 0.82), aes(year, share),
+             shape = 21, fill = "white", colour = "#00205B", size = 3) +
+  geom_point(data = tibble(year = 2035, share = 1), aes(year, share),
+             shape = 21, fill = "white", colour = "#D2232A", size = 3) +
+  annotate("text", x = 2029.6, y = 0.82, label = "Australia: 82% renewable\nby 2030 (current target)",
+           hjust = 1, vjust = 0.4, size = 3, colour = "#00205B", lineheight = 0.95) +
+  annotate("text", x = 2034.6, y = 1, label = "US: 100% carbon-free by 2035\n(former goal, revoked 2025)",
+           hjust = 1, vjust = 0.4, size = 3, colour = "#D2232A", lineheight = 0.95) +
+  scale_colour_manual(values = tgt_cols, name = NULL) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "22")))) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1.05)) +
+  scale_x_continuous(breaks = seq(2000, 2035, 5)) +
   labs(
-    title    = "Renewable share of electricity generation and the 82% target for 2030",
-    subtitle = paste("Renewable share of all Australian electricity generation (all grids, off-grid and rooftop solar),",
-                     "
-financial years shown by the year they start, against a straight-line path to the target"),
+    title    = "Clean electricity targets, Australia and the United States",
+    subtitle = paste("Share of generation against each country's target. Australia: renewables, financial years by the",
+                     "\nyear they start. US: renewables plus nuclear (carbon-free), calendar years. Dotted lines: straight paths to target."),
     x = NULL, y = NULL,
-    caption = paste(SRC, "
-The 82% target applies to the main grids (NEM and WA's SWIS), so this all-Australia share is a close proxy, not the official measure.")
+    caption = paste0(SRC, "
+", US_SRC,
+                     "\nAustralia's 82% target applies to the main grids (NEM and WA's SWIS); this all-Australia share is a close proxy. ",
+                     "The US has no current national target;\nthe 2035 goal (2021) was reversed in January 2025. ",
+                     "Several states have their own, e.g. California 60% renewable by 2030 and 100% clean by 2045.")
   ) +
-  theme_csis()
+  theme_csis() +
+  theme(legend.key.width = unit(1.2, "cm"))
 
-ggsave("04_renewables_vs_target.png", p4, width = 9, height = 5, dpi = 150, bg = "white")
+ggsave("04_renewables_vs_target.png", p4, width = 9.5, height = 5.4, dpi = 150, bg = "white")
 
-export_chart_csv(p4, "04_renewables_vs_target.csv",
-                 y_format = "percent", chart_type = "Line with reference path",
-                 notes = sprintf(paste0("year = start year of the financial year. y-axis limits in the metadata ",
-                                        "are fractions (0-0.9 = 0-90%%). Dashed grey45 (#737373, 0.8 mm) ",
-                                        "straight line from %d (%.1f%%) to 2030 (82%%), with an open circle and ",
-                                        "label '82%% by 2030 policy target' at the 2030 point. Marker (size 3) on ",
-                                        "the latest year."),
-                                 last_pt$year, last_pt$share * 100))
+write_csv(bind_rows(renew_hist |> mutate(series = "Australia: renewables (year = start of financial year)"),
+                    us_lowc |> mutate(series = "United States: renewables plus nuclear (calendar year)"),
+                    tibble(year = c(2030, 2035), share = c(0.82, 1),
+                           series = c("Australia target (82% by 2030)",
+                                      "US former goal (100% carbon-free by 2035, revoked 2025)"))),
+          "04_renewables_vs_target.csv")
 
 
 # ------------------------------------------------------------------------------
@@ -623,7 +646,7 @@ p5 <- gen_fy |>
   scale_y_continuous(labels = comma, expand = expansion(c(0, 0.05))) +
   scale_x_continuous(breaks = seq(2005, 2025, 5)) +
   labs(
-    title    = "Renewable electricity generation by technology",
+    title    = "Australian renewable electricity generation by technology",
     subtitle = "Renewable generation by technology, TWh, financial years shown by the year they start",
     x = NULL, y = "TWh", caption = SRC
   ) +

@@ -824,7 +824,7 @@ make_p15 <- function(cur) {
   d_imp <- imp_for(cur) |> mutate(series = imp_lbl[origin], panel = p_imp)
   d_cap <- imt_epm |>
     mutate(value = if (cur == "USD") value * fx_or_latest(fx_quarter(date)) else value,
-           smooth = roll4(value), series = "IMT equipment capex", panel = p_cap) |>
+           smooth = roll4(value), series = "Equipment capex, information media and telecoms", panel = p_cap) |>
     filter(date >= as.Date("2010-01-01"))
   d <- bind_rows(d_imp, d_cap) |> mutate(panel = factor(panel, levels = c(p_imp, p_cap)))
   ggplot(d, aes(date)) +
@@ -834,7 +834,7 @@ make_p15 <- function(cur) {
     facet_wrap(~panel, ncol = 1, scales = "free_y") +
     scale_colour_manual(values = c(`All countries` = csis_colours[["navy"]],
                                    `From the US` = csis_colours[["red"]],
-                                   `IMT equipment capex` = csis_colours[["gold"]])) +
+                                   `Equipment capex, information media and telecoms` = csis_colours[["gold"]])) +
     scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn", accuracy = 0.5),
                        expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
     scale_x_date(date_breaks = "2 years", date_labels = "%Y") +

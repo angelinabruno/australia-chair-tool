@@ -679,7 +679,7 @@ map
 
 ## Column {.tabset width="50%" title="Electricity mix"}
 
-### Australia vs US
+### Generation mix
 
 ![](Energy/03_primary_vs_electricity.png){title="Electricity generation by fuel, Australia and the United States"}
 
@@ -687,17 +687,17 @@ map
 
 ![](Energy/01_fuel_mix_timeseries.png){title="Share of generation by fuel over time, Australia and the US"}
 
-### Renewables vs US
+### Renewables share
 
 ![](Energy/09_renewable_share_au_us.png){title="Renewable share of generation, Australia and the United States"}
 
-### Renewables by technology
+### Australia renewables by technology
 
-![](Energy/05_renewables_composition.png){title="Renewable generation by technology"}
+![](Energy/05_renewables_composition.png){title="Australian renewable generation by technology"}
 
-### 82% target
+### Targets, Australia vs US
 
-![](Energy/04_renewables_vs_target.png){title="Renewable share against the 82% by 2030 target"}
+![](Energy/04_renewables_vs_target.png){title="Clean electricity targets, Australia and the United States"}
 
 ### By state
 
@@ -709,7 +709,7 @@ map
 
 ## Column {.tabset width="50%" title="Relative costs and prices"}
 
-### Wholesale prices vs US
+### Wholesale prices, Australia vs US
 
 ![](Energy/07_wholesale_prices_au_us.png){title="Wholesale electricity prices, Australia and US markets"}
 
@@ -753,11 +753,11 @@ map
 
 ### Column {.tabset title="Power and demand"}
 
-#### Demand by region
+#### Demand by NEM region
 
 ![](<Data centres/10_dc_demand_by_region.png>){title="Data centre electricity demand by NEM region"}
 
-#### Share of electricity
+#### Share of electricity use
 
 ![](<Data centres/12_dc_share_of_grid_au_us.png>){title="Data centres' share of electricity use, Australia and the US"}
 
@@ -771,7 +771,7 @@ map
 
 ### Column {.tabset title="Investment"}
 
-#### By financial year
+#### Capex by financial year
 
 ![](<Data centres/08_divj_financial_year.png>){title="Information Media & Telecommunications capital expenditure by financial year"}
 
@@ -783,7 +783,7 @@ map
 
 ![](<Data centres/06_actual_vs_expected_epm_divj.png>){title="Equipment capex: estimates and outturn by financial year"}
 
-#### Buildings
+#### Commercial buildings
 
 ![](<Data centres/14_commercial_nec_building.png>){title="Commercial buildings n.e.c.: work done and approvals"}
 
@@ -793,7 +793,7 @@ map
 
 ### Column {.tabset title="Cost to build and run"}
 
-#### US power prices
+#### US industrial power prices
 
 ![](<Data centres/16_us_industrial_power_prices.png>){title="Industrial electricity prices, US data centre states"}
 
