@@ -666,10 +666,6 @@ filter_status
 
 ## Column {.tabset}
 
-### Australia's global share
-
-![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
-
 ### Map
 
 ```{r}
@@ -678,6 +674,10 @@ filter_status
 #| padding: 0
 map
 ```
+
+### Australia's global share
+
+![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
 
 ### Reserves vs production
 
