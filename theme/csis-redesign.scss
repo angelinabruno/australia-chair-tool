@@ -258,3 +258,10 @@ $border-radius:           6px;
 @media (max-width: 640px) { .page-guide-link { position: static; display: block; margin-top: 4px; } }
 
 .page-guide-link.inline { position: static; display: block; margin: 2px 0 0; font-weight: 400; }
+
+// Trade overview: goods and services stacked in the left column; each chart
+// shrinks to fit its card rather than scrolling inside it
+#trade-overview .card-body { overflow: hidden !important; }
+#trade-overview .card-body img { max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }
+// The US chart keeps its own height and stays in view while the left column scrolls
+#trade-overview .trade-us { align-self: start; height: auto !important; position: sticky; top: 0; }
