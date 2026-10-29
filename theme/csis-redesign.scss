@@ -268,3 +268,8 @@ $border-radius:           6px;
 #trade-overview .card-body img { max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }
 // The US chart keeps its own height and stays in view while the left column scrolls
 #trade-overview .trade-us { align-self: start; height: auto !important; position: sticky; top: 0; }
+
+// Economy page: the stacked two-chart images (GDP, OECD comparison,
+// Productivity) shrink to fit their card rather than scrolling inside it
+#economic-indicators .card-body { overflow: hidden !important; }
+#economic-indicators .card-body img { max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }

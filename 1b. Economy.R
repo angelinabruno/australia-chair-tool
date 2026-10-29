@@ -332,6 +332,19 @@ p_prod_lv <- ggplot(prod_lv, aes(year, value, colour = country)) +
 
 save_plot(p_prod_lv, "productivity_level_au_us.png")
 
+# Growth and level together, for the dashboard's single "Productivity" tab
+p_prod_both <- (p_prod + labs(title = "Labour productivity growth", caption = NULL)) /
+  ((p_prod_lv %+% filter(prod_lv, year >= 2000)) +
+     labs(title = "Labour productivity level",
+                    caption = paste("Sources: ABS, Australian System of National Accounts; US Bureau of Labor Statistics,",
+                                    "Productivity and Costs;
+OECD Productivity Database (GDP per hour worked).",
+                                    "
+PPPs adjust for price differences, so the level is the same in A$ and US$ views.")) +
+     theme(legend.position = "none")) +
+  plot_annotation(title = "Labour productivity, Australia and the United States", theme = theme_csis())
+save_plot(p_prod_both, "productivity_both_au_us.png", width = 8, height = 8)
+
 # Real GDP per person. Australia: ABS GDP per capita, chain volume measures,
 # seasonally adjusted (5206.0 Table 1). US: BEA real GDP (A191RX) over
 # population (B230RC, NIPA Table 2.1, thousands, midperiod).
@@ -777,6 +790,63 @@ make_oecd_rank <- function(cur) {
 }
 
 save_both(make_oecd_rank, "oecd_gdp_rank_australia.png", save_plot, width = 8, height = 6.2)
+
+# GDP per person at purchasing power parity, all 38 OECD members (World Bank,
+# current international dollars). PPPs adjust for price differences, so there
+# is one version for both the A$ and US$ views.
+wb_pc <- WDI(country = names(oecd_members), indicator = c(pc_ppp = "NY.GDP.PCAP.PP.CD"),
+             start = 2020, end = year(Sys.Date()), extra = FALSE) |>
+  filter(iso2c %in% names(oecd_members), !is.na(pc_ppp)) |>
+  transmute(code = iso2c, country = unname(oecd_members[iso2c]),
+            year = as.integer(year), pc_ppp = as.numeric(pc_ppp)) |>
+  distinct(code, year, .keep_all = TRUE)
+pc_years <- wb_pc |> count(year) |> filter(n == length(oecd_members)) |> pull(year)
+if (!length(pc_years)) stop("No year has GDP per person (PPP) for all 38 OECD members.")
+pc_oecd_yr <- max(pc_years)
+
+ranked_pc <- wb_pc |>
+  filter(year == pc_oecd_yr) |>
+  arrange(desc(pc_ppp)) |>
+  mutate(rank = row_number(),
+         who = case_when(country == "Australia" ~ "au", country == "United States" ~ "us", TRUE ~ "other"))
+stopifnot(nrow(ranked_pc) == length(oecd_members))
+message(sprintf("GDP per person (PPP) %d: Australia %s, United States %s of 38 OECD members",
+                pc_oecd_yr, ordinal(ranked_pc$rank[ranked_pc$who == "au"]),
+                ordinal(ranked_pc$rank[ranked_pc$who == "us"])))
+
+p_oecd_pc <- ranked_pc |>
+  filter(rank <= 15 | who != "other") |>
+  arrange(pc_ppp) |>
+  mutate(country_label = factor(paste0(rank, ". ", country), levels = paste0(rank, ". ", country))) |>
+  ggplot(aes(pc_ppp / 1000, country_label, fill = who)) +
+  geom_col(width = 0.72) +
+  geom_text(data = ~ filter(.x, who != "other"),
+            aes(label = paste0("$", number(pc_ppp / 1000, accuracy = 0.1), "k")),
+            hjust = -0.15, size = 3.1, family = "source_sans", colour = csis_colours[["grey"]]) +
+  scale_fill_manual(values = c(au = csis_colours[["navy"]], us = csis_colours[["red"]],
+                               other = csis_colours[["ltgrey"]]), guide = "none") +
+  scale_x_continuous(labels = label_dollar(suffix = "k", accuracy = 1),
+                     expand = expansion(mult = c(0, 0.12))) +
+  labs(title = "Largest OECD economies by GDP per person",
+       subtitle = paste0("Current international $ at purchasing power parity, ", pc_oecd_yr,
+                         ". Ranking is among all 38 OECD members."),
+       x = NULL, y = NULL,
+       caption = "Source: World Bank World Development Indicators (GDP per capita, PPP, current international $).") +
+  theme_csis() +
+  theme_bars
+
+save_plot(p_oecd_pc, "oecd_gdp_per_person_ppp.png", width = 8, height = 6.2)
+
+# Both rankings in one image, for the dashboard's "OECD comparison" tab
+make_oecd_both <- function(cur) {
+  (make_oecd_rank(cur) + labs(title = "Nominal GDP", caption = NULL)) /
+    (p_oecd_pc + labs(title = "GDP per person, purchasing power parity",
+                      caption = paste0(make_oecd_rank(cur)$labels$caption,
+                                       "
+GDP per person: World Bank WDI (GDP per capita, PPP, current international $)."))) +
+    plot_annotation(title = "Largest OECD economies", theme = theme_csis())
+}
+save_both(make_oecd_both, "oecd_comparison.png", save_plot, width = 8, height = 11)
 
 # Takeaways under each chart ---------------------------------------------
 
