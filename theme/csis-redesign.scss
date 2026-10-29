@@ -277,3 +277,10 @@ $border-radius:           6px;
 // scroll down within the card to the level chart
 #economic-indicators .econ-over-time .card-body { overflow-y: auto !important; }
 #economic-indicators .econ-over-time .card-body img { max-height: none; width: 100%; }
+
+// Data centres page: a thin strip on each panel header says whose data it is,
+// navy for Australia and red for the US benchmarks
+#data-centres .dc-au > .card-header, #data-centres .card.dc-au > .card-header { border-top: 4px solid #00205B; }
+#data-centres .dc-us > .card-header, #data-centres .card.dc-us > .card-header { border-top: 4px solid #D2232A; }
+#data-centres .card-body:has(> p > img), #data-centres .card-body:has(img) { overflow: hidden !important; }
+#data-centres .card-body img { max-height: 540px; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }
