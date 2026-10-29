@@ -543,60 +543,6 @@ services <- readr::read_csv(file.path(TRADE_DIR, "abs_services_balance_tidy.csv"
 
 
 # ---------------------------------------------------------------
-# 3. Chart — services balance
-# ---------------------------------------------------------------
-# Columns rather than a line: this is a signed balance, and the sign
-# flip in 2020 is the whole story. Fill encodes direction, so no
-# legend is needed once the axis label states the convention.
-
-# Drawn twice, in A$ and US$ (each calendar year at its average rate).
-make_services <- function(cur) {
-services_plot <- services |>
-  mutate(value = if (cur == "USD") aud_to_usd(value, fx_calendar_year(year)) else value,
-         direction = if_else(value >= 0, "Surplus", "Deficit"))
-
-ggplot(services_plot, aes(year, value, fill = direction)) +
-  geom_col(width = 0.72) +
-  geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.5) +
-  annotate(
-    "text",
-    x = 2020, y = services_plot$value[services_plot$year == 2020] + 4,
-    label = "Surplus in 2020",
-    family = "source_sans", size = 3, lineheight = 0.95,
-    colour = csis_colours[["teal"]], fontface = "bold"
-  ) +
-  scale_fill_manual(
-    values = c(Deficit = unname(csis_colours["red"]),
-               Surplus = unname(csis_colours["teal"]))
-  ) +
-  scale_x_continuous(
-    breaks = seq(2005, 2025, by = 5),
-    minor_breaks = NULL,
-    expand = expansion(mult = c(0.02, 0.02))
-  ) +
-  scale_y_continuous(
-    labels = label_dollar(prefix = cur_sym[[cur]], suffix = "b", accuracy = 1),
-    expand = expansion(mult = c(0.10, 0.14))
-  ) +
-  labs(
-    title    = "Australia's balance on trade in services",
-    subtitle = "Exports less imports, 2005-2025",
-    caption  = paste0(
-      ABS_SOURCE,
-      "\nNote: a negative balance indicates imports exceed exports.",
-      if (cur == "USD") fx_note[["USD"]] else ""
-    ),
-    x = NULL, y = paste0("Balance (", cur_sym[[cur]], " billion)")
-  ) +
-  theme_csis() +
-  theme(
-    legend.position    = "none",
-    panel.grid.major.y = element_line(colour = "#E6E7E8", linewidth = 0.4)
-  )
-}
-
-
-# ---------------------------------------------------------------
 # 7. Export
 # ---------------------------------------------------------------
 # dpi MUST match showtext_opts() above or the text scales wrong.
@@ -605,7 +551,7 @@ save_csis <- function(plot, file, width = 8, height = 4.8) {
   ggsave(file, plot, width = width, height = height, dpi = 150, bg = "white")
 }
 
-save_both(make_services, "abs_services_balance.png", save_csis, height = 4.4)
+# (The services balance chart is banked in 'Maybe archive/services_balance_chart.R'.)
 
 
 # ---------------------------------------------------------------
@@ -967,6 +913,20 @@ if (length(missing) > 0) {
   stop("Countries not found after recode: ", paste(missing, collapse = ", "))
 }
 
+# Each partner's rank among all destinations in the latest year, for the
+# end-of-line labels ("#1 China"), so the US position is visible.
+short_name <- function(x) recode(x, "United States of America" = "United States")
+# US always red (one colour per country across the dashboard); others in turn
+partner_colours <- function(countries) {
+  others <- setdiff(countries, "United States of America")
+  pal <- unname(csis_colours[c("navy", "teal", "gold", "grey", "ltgrey")])
+  setNames(c(csis_colours[["red"]], pal[seq_along(others)]), c("United States of America", others))
+}
+exp_rank <- dfat_countries |>
+  filter(year == max(year)) |>
+  arrange(desc(exports_k)) |>
+  transmute(country, rank = row_number())
+
 exports_long <- dfat_countries |>
   filter(country %in% top5) |>
   mutate(
@@ -989,7 +949,9 @@ make_exports_long <- function(cur) {
 plot_dat <- exports_long |>
   mutate(country = factor(country, levels = lvls),
          exports_bn = if (cur == "USD") aud_to_usd(exports_bn, fx_calendar_year(year)) else exports_bn)
-ends     <- plot_dat |> filter(year == max(year))
+ends     <- plot_dat |> filter(year == max(year)) |>
+  left_join(exp_rank, by = "country") |>
+  mutate(label = paste0("#", rank, " ", short_name(country)))
 
 ggplot(plot_dat,
                          aes(year, exports_bn, colour = country, group = country)) +
@@ -997,13 +959,13 @@ ggplot(plot_dat,
   geom_point(size = 1.4) +
   geom_text_repel(
     data = ends,
-    aes(label = str_wrap(country, 14)),
+    aes(label = str_wrap(label, 16)),
     family = "source_sans", size = 3.2, fontface = "bold", lineheight = 0.9,
     hjust = 0, direction = "y", nudge_x = 0.5,
     segment.size = 0.3, segment.alpha = 0.5,
     min.segment.length = 0, seed = 42
   ) +
-  scale_colour_csis() +
+  scale_colour_manual(values = partner_colours(lvls)) +
   scale_x_continuous(
     breaks = seq(2006, 2025, by = 2),
     expand = expansion(mult = c(0.02, 0.18))
@@ -1016,7 +978,8 @@ ggplot(plot_dat,
   labs(
     #title    = "China's rise reshaped Australia's export base",
     title = "Merchandise exports",
-    subtitle = paste0("By destination, ", cur_sym[[cur]], " billion, 2006-2025"),
+    subtitle = paste0("By destination, ", cur_sym[[cur]], " billion, 2006-", max(plot_dat$year),
+                      ". Labels show each partner's rank among all destinations in ", max(plot_dat$year), "."),
     caption  = paste0(
       "Source: DFAT, Australia's merchandise exports and imports country ",
       "and commodity pivot table (ABS cat. 5368.0), calendar years.",
@@ -1160,6 +1123,11 @@ top5_imports <- top5_abs        # <- change to top5_dfat if preferred
 message("ABS five:  ", paste(top5_abs,  collapse = ", "))
 message("DFAT five: ", paste(top5_dfat, collapse = ", "))
 
+imp_rank <- trade_country |>
+  filter(trade_type == "Total Imports", year == max(year)) |>
+  arrange(desc(value_k)) |>
+  transmute(country, rank = row_number())
+
 imports_long <- trade_country |>
   filter(trade_type == "Total Imports", country %in% top5_imports) |>
   mutate(
@@ -1175,7 +1143,7 @@ stopifnot(length(setdiff(top5_imports, unique(imports_long$country))) == 0)
 # ---------------------------------------------------------------
 
 plot_partner_series <- function(dat, yvar, ylab, y_scale,
-                                title, subtitle, caption) {
+                                title, subtitle, caption, ranks = NULL) {
   
   lvls <- dat |>
     filter(year == max(year)) |>
@@ -1184,19 +1152,22 @@ plot_partner_series <- function(dat, yvar, ylab, y_scale,
   
   dat  <- dat |> mutate(country = factor(country, levels = lvls))
   ends <- dat |> filter(year == max(year))
+  ends$label <- if (is.null(ranks)) as.character(ends$country) else
+    paste0("#", ranks$rank[match(ends$country, ranks$country)], " ",
+           recode(as.character(ends$country), "United States of America" = "United States"))
   
   ggplot(dat, aes(year, {{ yvar }}, colour = country, group = country)) +
     geom_line(linewidth = 0.9) +
     geom_point(size = 1.4) +
     geom_text_repel(
       data = ends,
-      aes(label = str_wrap(country, 14)),
+      aes(label = str_wrap(label, 16)),
       family = "source_sans", size = 3.2, fontface = "bold", lineheight = 0.9,
       hjust = 0, direction = "y", nudge_x = 0.5,
       segment.size = 0.3, segment.alpha = 0.5,
       min.segment.length = 0, seed = 42
     ) +
-    scale_colour_csis() +
+    scale_colour_manual(values = partner_colours(lvls)) +
     scale_x_continuous(breaks = seq(2006, 2025, by = 2),
                        expand = expansion(mult = c(0.02, 0.18))) +
     y_scale +
@@ -1229,9 +1200,11 @@ make_imports_long <- function(cur) plot_partner_series(
                      limits = c(0, NA), expand = expansion(mult = c(0, 0.08))),
   #title    = "China supplies more than a quarter of Australia's goods imports",
    title = "Merchandise imports by origin",
-  subtitle = paste0(cur_sym[[cur]], " billion, 2006-2025"),
+  subtitle = paste0(cur_sym[[cur]], " billion, 2006-", max(imports_long$year),
+                    ". Labels show each partner's rank among all sources in ", max(imports_long$year), "."),
   caption  = paste0(DFAT_SRC, GOODS_NOTE,
-                    if (cur == "USD") fx_note[["USD"]] else "")
+                    if (cur == "USD") fx_note[["USD"]] else ""),
+  ranks = imp_rank
 )
 
 save_both(make_imports_long, "dfat_imports_partners_long.png",
@@ -1320,32 +1293,40 @@ ggsave("dfat_import_shares_by_sector.png", p_imports_sector,
 
 
 # ---------------------------------------------------------------
-# 6. Optional — exports vs imports sector composition
+# 6. Trade by sector: exports and imports, latest year
 # ---------------------------------------------------------------
-# A faceted stacked area works where the line version does not,
-# because each panel is normalised to 100%.
+# Bars for the latest year (the Trade by sector tab). Shares of all
+# merchandise exports and of all merchandise imports, by DFAT's broad sector.
 
-p_both <- ggplot(sector_shares, aes(year, share, fill = sector)) +
-  geom_area(colour = "white", linewidth = 0.25) +
-  facet_wrap(~ trade_type) +
-  scale_fill_csis() +
-  scale_x_continuous(breaks = seq(2006, 2025, by = 4),
-                     expand = expansion(mult = c(0, 0))) +
-  scale_y_continuous(labels = label_percent(accuracy = 1),
-                     expand = expansion(mult = c(0, 0))) +
+sec_yr <- max(sector_shares$year)
+sec_latest <- sector_shares |>
+  filter(year == sec_yr) |>
+  mutate(flow = recode(trade_type, "Total Exports" = "Exports", "Total Imports" = "Imports"),
+         flow = factor(flow, levels = c("Exports", "Imports")))
+sec_order <- sec_latest |> filter(flow == "Exports") |> arrange(share) |> pull(sector)
+
+p_both <- ggplot(sec_latest |> mutate(sector = factor(sector, levels = sec_order)),
+                 aes(share, sector, fill = flow)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_text(aes(label = percent(share, accuracy = 1)), position = position_dodge(width = 0.8),
+            hjust = -0.15, size = 3.3, family = "source_sans", colour = csis_colours[["grey"]]) +
+  scale_fill_manual(values = c(Exports = csis_colours[["navy"]], Imports = csis_colours[["teal"]]),
+                    breaks = c("Exports", "Imports")) +
+  scale_x_continuous(labels = label_percent(accuracy = 1), expand = expansion(mult = c(0, 0.12))) +
   labs(
-    #title    = "Australia's trade composition is close to a mirror image",
-    title = "Share of merchandise trade",
-    subtitle = "By broad sector, 2006-2025",
-    caption  = DFAT_SRC, x = NULL, y = NULL
+    title = "Merchandise trade by sector",
+    subtitle = paste0("Share of all merchandise exports and of all merchandise imports, calendar ", sec_yr),
+    caption  = paste0(DFAT_SRC, "
+Sectors are DFAT's four-way grouping of SITC 3-digit products."),
+    x = NULL, y = NULL
   ) +
   theme_csis() +
-  theme(legend.position = "top",
-        strip.text = element_text(face = "bold",
-                                  colour = csis_colours[["navy"]]))
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4),
+        axis.line.x = element_blank())
 
 ggsave("dfat_sector_composition_both.png", p_both,
-       width = 9.5, height = 5, dpi = 150, bg = "white")
+       width = 9, height = 4.8, dpi = 150, bg = "white")
 
 
 # ---------------------------------------------------------------
@@ -1357,86 +1338,90 @@ write_csv(sector_shares,  "dfat_sector_shares_tidy.csv")
 
 
 # ---------------------------------------------------------------
-# Services imports: importance of the United States
-# Source: ABS International Trade: Supplementary Information, CY2025
+# Services trade by partner: exports and imports, latest year
+# Source: ABS International Trade: Supplementary Information
 # ---------------------------------------------------------------
+# svc_cr (exports) and svc_db (imports) come from the ABS data cubes read at
+# the top of this script (country, year, value_m). Regional groups and totals
+# are dropped; the ten largest partners by two-way services trade are shown.
 library(dplyr)
 library(ggplot2)
 library(scales)
 
-# abs_services_imports_by_country.csv is written at the top of this script
-# from the ABS data cube (country, value_m, share, change). Regional groups
-# are dropped so the chart shows the top 10 individual sources.
-services_imp <- readr::read_csv(
-  file.path(TRADE_DIR, "abs_services_imports_by_country.csv"),
-  show_col_types = FALSE
-) %>%
-  filter(
-    !is.na(value_m),
-    !country %in% c("APEC", "OECD", "ASEAN", "EU", "Unallocated")
-  ) %>%
-  slice_max(value_m, n = 10) %>%
-  mutate(
-    value_bn = value_m / 1000,
-    is_us = country == "United States of America",
-    country = if_else(is_us, "United States", country)
-  ) %>%
-  arrange(value_bn) %>%
-  mutate(country = factor(country, levels = country))
+SVC_DROP <- "(?i)^total|all other|^[(]|^APEC$|^OECD$|^ASEAN$|^EU$|^European Union|Unallocated|^G20"
+# ABS partner names, shortened; what each covers is in the caption
+SVC_SHORT <- c(
+  "United States of America"                              = "United States",
+  "United Kingdom, Channel Islands and Isle of Man, nfd"  = "UK",
+  "China (excludes SARs and Taiwan)"                      = "China",
+  "Asia, nes"                                             = "Asia",
+  "Hong Kong (SAR of China)"                              = "Hong Kong",
+  "Korea, Republic of (South)"                            = "South Korea",
+  "Europe, nes"                                           = "Europe",
+  "Oceania and Antarctica, nes"                           = "Oceania"
+)
+svc_yr <- max(svc_db$year)
+svc_partner <- bind_rows(
+  as.data.frame(svc_cr) |> mutate(flow = "Exports"),
+  as.data.frame(svc_db) |> mutate(flow = "Imports")
+) |>
+  filter(year == svc_yr, !is.na(value_m), !grepl(SVC_DROP, country, perl = TRUE)) |>
+  mutate(partner = if_else(country %in% names(SVC_SHORT), SVC_SHORT[country], country))
+svc_top <- svc_partner |>
+  group_by(partner) |> summarise(two_way = sum(value_m), .groups = "drop") |>
+  slice_max(two_way, n = 10) |> arrange(two_way)
+svc_partner <- svc_partner |>
+  filter(partner %in% svc_top$partner) |>
+  mutate(partner = factor(partner, levels = svc_top$partner),
+         flow = factor(flow, levels = c("Exports", "Imports")),
+         value_bn = value_m / 1000)
+svc_tot <- c(Exports = total_row(svc_cr)[year == svc_yr, value_m],
+             Imports = total_row(svc_db)[year == svc_yr, value_m])
 
-# Useful headline numbers
-us <- services_imp %>% filter(is_us)
+us_svc <- svc_partner |> filter(partner == "United States")
+cat(sprintf("United States: services exports A$%.1fbn, imports A$%.1fbn in %d\n",
+            us_svc$value_bn[us_svc$flow == "Exports"], us_svc$value_bn[us_svc$flow == "Imports"], svc_yr))
 
-cat(sprintf(
-  "United States: $%.1fbn, %.1f%% of Australian services imports in %d\n",
-  us$value_bn, us$share, svc_imp_year
-))
+# Footnotes for shortened names that appear in the chart
+svc_notes <- c(UK = "UK includes the Channel Islands and Isle of Man.",
+               China = "China excludes Hong Kong, Macau and Taiwan.",
+               Asia = "Asia = Asian countries the ABS does not list separately.",
+               Europe = "Europe = European countries the ABS does not list separately.",
+               Oceania = "Oceania = Oceanian countries the ABS does not list separately.")
+svc_notes <- svc_notes[names(svc_notes) %in% levels(svc_partner$partner)]
 
 # Drawn twice, in A$ and US$ (at the calendar year's average rate).
-make_services_imp <- function(cur) {
-d <- services_imp |>
-  mutate(value_bn = if (cur == "USD") aud_to_usd(value_bn, fx_calendar_year(svc_imp_year)) else value_bn)
-ggplot(d, aes(value_bn, country, fill = is_us)) +
-  geom_col(width = 0.7) +
-  geom_text(
-    aes(label = paste0(cur_sym[[cur]], sprintf("%.1f", value_bn), "bn  (", share, "%)")),
-    hjust = -0.1,
-    size = 3,
-    family = "source_sans",
-    colour = csis_colours[["grey"]]
-  ) +
-  scale_fill_manual(
-    values = c(`TRUE` = csis_colours[["red"]],
-               `FALSE` = csis_colours[["ltgrey"]]),
-    guide = "none"
-  ) +
-  scale_x_continuous(
-    labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn"),
-    expand = expansion(mult = c(0, 0.22))
-  ) +
-  labs(
-    title = "Australia's services imports by partner",
-    subtitle = paste0("Services imports by source country, ", cur_sym[[cur]], ", ", svc_imp_year),
-    x = NULL, y = NULL,
-    caption = paste(
-      "Source: ABS, International Trade: Supplementary Information,",
-      paste0("Calendar Year ", svc_imp_year, "."),
-      if (cur == "USD") fx_note[["USD"]] else ""
-    )
-  ) +
-  theme_csis() +
-  theme(
-    panel.grid.major.y = element_blank(),
-    panel.grid.major.x = element_line(
-      colour = "#E6E7E8", linewidth = 0.4
-    ),
-    axis.line.x = element_blank(),
-    axis.ticks.x = element_blank()
-  )
+make_services_partner <- function(cur) {
+  d <- svc_partner |>
+    mutate(value_bn = if (cur == "USD") aud_to_usd(value_bn, fx_calendar_year(svc_yr)) else value_bn,
+           share = 100 * value_m / svc_tot[as.character(flow)])
+  ggplot(d, aes(value_bn, partner, fill = flow)) +
+    geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+    geom_text(aes(label = sprintf("%s%.1fbn (%.0f%%)", cur_sym[[cur]], value_bn, share)),
+              position = position_dodge(width = 0.8), hjust = -0.08, size = 2.7,
+              family = "source_sans", colour = csis_colours[["grey"]]) +
+    scale_fill_manual(values = c(Exports = csis_colours[["navy"]], Imports = csis_colours[["teal"]]),
+                      breaks = c("Exports", "Imports")) +
+    scale_x_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn"),
+                       expand = expansion(mult = c(0, 0.25))) +
+    labs(
+      title = "Australia's services trade by partner",
+      subtitle = paste0("Services exports and imports, ten largest partners, ", cur_sym[[cur]], ", ", svc_yr,
+                        ". Share of each total in brackets."),
+      x = NULL, y = NULL,
+      caption = paste0("Source: ABS, International Trade: Supplementary Information, Calendar Year ", svc_yr, ".\n",
+                       paste(svc_notes, collapse = " "),
+                       if (cur == "USD") fx_note[["USD"]] else "")
+    ) +
+    theme_csis() +
+    theme(panel.grid.major.y = element_blank(),
+          panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4),
+          axis.line.x = element_blank(), axis.ticks.x = element_blank())
 }
 
-save_both(make_services_imp, "services_imports_us.png",
-          function(p, f) ggsave(f, p, width = 8, height = 5.5, dpi = 150, bg = "white"))
+save_both(make_services_partner, "services_trade_by_partner.png",
+          function(p, f) ggsave(f, p, width = 8.5, height = 6.2, dpi = 150, bg = "white"))
+
 
 
 
@@ -2172,10 +2157,6 @@ bn_label <- function(x) ifelse(x < 0, paste0("-", sym, abs(x), "b"), paste0(sym,
 
 ggplot() +
   geom_col(data = bal, aes(year, surplus, fill = "US trade surplus"), width = 0.7) +
-  geom_line(data = bal, aes(year, surplus_ex_gold, linetype = "US surplus excluding gold"),
-            colour = csis_colours[["grey"]], linewidth = 0.6) +
-  geom_point(data = bal, aes(year, surplus_ex_gold), shape = 21, size = 1.4,
-             colour = csis_colours[["grey"]], fill = "white") +
   geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.5) +
   geom_line(data = flows, aes(year, value, colour = series), linewidth = 1) +
   geom_point(data = flows, aes(year, value, colour = series), size = 1.6) +
@@ -2190,12 +2171,10 @@ ggplot() +
            colour = csis_colours[["navy"]]) +
   scale_colour_manual(values = setNames(unname(csis_colours[c("navy", "red")]), flow_levels)) +
   scale_fill_manual(values = c("US trade surplus" = "#F7D98B")) +
-  scale_linetype_manual(values = c("US surplus excluding gold" = "22")) +
   scale_y_continuous(labels = bn_label, breaks = scales::pretty_breaks(8)) +
   scale_x_continuous(breaks = scales::pretty_breaks(8),
                      expand = expansion(mult = c(0.01, 0.15))) +
-  guides(colour = guide_legend(order = 1), fill = guide_legend(order = 2),
-         linetype = guide_legend(order = 3)) +
+  guides(colour = guide_legend(order = 1), fill = guide_legend(order = 2)) +
   labs(
     title    = "Australia's trade with the United States",
     subtitle = paste0(if (INCLUDE_SERVICES) "Goods and services" else "Goods",
@@ -2205,7 +2184,8 @@ ggplot() +
       "Sources: DFAT country and commodity pivot table (ABS cat. 5368.0)",
       if (INCLUDE_SERVICES) "; ABS, International Trade: Supplementary Information, Calendar Year" else "",
       ".\nUS surplus = Australian imports from the US less Australian exports to the US.",
-      "\nExcluding gold removes SITC 971 (non-monetary gold) from both exports and imports.",
+      "
+Gold = SITC 971, non-monetary gold.",
       if (cur == "USD") fx_note[["USD"]] else ""
     )
   ) +
@@ -2326,16 +2306,9 @@ local({
   takeaway(tr("dfat_import_shares_by_sector.png"), sprintf(
     "%s made up the largest share of Australia's goods imports in %d (%.0f%%).",
     mi$sector[1], mi$year[1], 100 * mi$value_k[1] / mi$total_k[1]))
-  sb <- read_csv("abs_services_balance_tidy.csv", show_col_types = FALSE) |> arrange(year)
-  sbl <- sb[nrow(sb), ]
-  line_sb <- function(cur) {
-    v <- if (cur == "USD") sbl$value * fx_calendar_year(sbl$year) else sbl$value
-    sprintf("Australia imported %s more services than it exported in %d.", fmt_bn(abs(v), cur_sym[[cur]]), sbl$year)
-  }
-  if (sbl$value < 0) takeaway(tr("abs_services_balance.png"), line_sb("AUD"), line_sb("USD"))
   si <- read_csv("abs_services_imports_by_country.csv", show_col_types = FALSE) |>
     filter(!grepl("APEC|OECD|ASEAN|EU|European|G20|Total", country)) |> arrange(desc(value_m))
-  takeaway(tr("services_imports_us.png"), sprintf(
+  takeaway(tr("services_trade_by_partner.png"), sprintf(
     "The United States supplied %.1f%% of Australia's services imports in %d%s.",
     si$share[grepl("^United States", si$country)][1], svc_imp_year,
     if (grepl("^United States", si$country[1])) ", more than any other country" else ""))

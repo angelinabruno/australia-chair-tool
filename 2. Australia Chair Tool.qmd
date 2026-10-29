@@ -311,27 +311,23 @@ cat(paste0(
 
 ![](Trade/dfat_imports_partners_long.png){title="Imports by trading partner"}
 
-### Exports by sector
+### Trade by sector
 
-![](Trade/dfat_sector_composition_both.png){title="Exports by sector"}
+![](Trade/dfat_sector_composition_both.png){title="Merchandise trade by sector"}
 
 ### Imports by sector
 
 ![](Trade/dfat_import_shares_by_sector.png){title="Imports by sector"}
 
-### Services imports by partner
+### Services trade by partner
 
-![](Trade/services_imports_us.png){title="Services imports by source country"}
+![](Trade/services_trade_by_partner.png){title="Services trade by partner"}
 
 ## Column {.tabset width="50%" title="Trade balances"}
 
 ### US trade balance
 
 ![](Trade/us_au_trade_balance.png){title="US trade with Australia: exports each way and the US surplus"}
-
-### Services trade balance
-
-![](Trade/abs_services_balance.png){title="Services trade balance"}
 
 
 # Trade in goods
