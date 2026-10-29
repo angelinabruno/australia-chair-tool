@@ -70,15 +70,13 @@ min_tbl <- safely_num(read_csv("Critical minerals/minerals_au_us_tidy.csv", show
 li <- safely_num(min_tbl |> filter(mineral == "Lithium"))
 n_top3 <- safely_num(sum(min_tbl$au_world_rank <= 3, na.rm = TRUE))
 
-# Patents with a US applicant (IP Australia); the file starts with a metadata block
-pat_lines <- safely_num(readLines("Patents/us_applicants_count.csv", warn = FALSE))
+# US share of Australian patent applications (IP Australia, from '1h. Patents.R')
 pat <- safely_num({
-  rows <- grep("^[0-9]{4},[0-9]+$", pat_lines, value = TRUE)
-  d <- read.csv(text = rows, header = FALSE, col.names = c("year", "n"))
+  d <- read.csv("Patents/annual_us_applicants.csv")
   # The chart runs to last year with recent years shaded as incomplete; the
   # headline number uses the latest complete year (as in '1h. Patents.R').
-  d <- d[d$year <= as.integer(format(Sys.Date(), "%Y")) - 3L, ]
-  d[which.max(d$year), ]
+  d <- d[d$filing_year <= as.integer(format(Sys.Date(), "%Y")) - 3L, ]
+  d[which.max(d$filing_year), ]
 })
 
 stat <- function(page, num, label, note) sprintf(
@@ -101,9 +99,9 @@ stats <- c(
   stat("critical-minerals", sprintf("%.0f%%", li$au_share_world_production_pct),
        sprintf("Australia's share of world lithium output, the %s producer", largest(li$au_world_rank)),
        sprintf("Top three producer of %d critical minerals", n_top3)),
-  stat("intellectual-property", format(pat$n, big.mark = ","),
-       "Australian patent applications with a US applicant",
-       sprintf("Filed in %s", pat$year))
+  stat("intellectual-property", sprintf("%.0f%%", 100 * pat$share_us),
+       "Share of Australian patent applications with a US applicant",
+       sprintf("Standard patents first filed in %s", pat$filing_year))
 )
 
 tile <- function(page, title, text, img) {
@@ -183,8 +181,6 @@ cat(paste0(
   '<section class="ov-section"><h2 class="ov-h2">Explore the relationship</h2>',
   '<p class="ov-sub">Each section opens a page of charts drawn from official US and Australian data.</p>',
   '<div class="ov-grid">', paste(tiles, collapse = ""), '</div></section>',
-  '<section class="ov-section"><h2 class="ov-h2">Across the Pacific</h2>',
-  '<p class="ov-sub">Two continent-sized countries, almost 16,000 kilometres apart from Canberra to Washington.</p>', maps, '</section>',
   '<p class="ov-sources">Sources: ABS, DFAT, US Bureau of Economic Analysis, USGS, Geoscience Australia, IRENA, AEMO, CAISO, ERCOT, EIA, IP Australia, OpenAlex and DCCEEW.</p>',
   '</div>',
   # Make the tiles and numbers switch dashboard pages like the top navigation does
@@ -197,9 +193,25 @@ cat(paste0(
 ```
 :::
 
+# Geography {scrolling="true"}
+
+::: {.card .ov-card}
+```{r}
+#| echo: false
+#| output: asis
+# The maps and land, coastline and population table are built in the Overview chunk above
+cat(paste0(
+  '<div class="ov">',
+  '<section class="ov-section"><h2 class="ov-h2">Across the Pacific</h2>',
+  '<p class="ov-sub">Two continent-sized countries, almost 16,000 kilometres apart from Canberra to Washington.</p>', maps, '</section>',
+  '</div>'
+))
+```
+:::
+
 # Economic indicators {orientation="columns"}
 
-## Column {.tabset width="50%" title="Size compared"}
+## Column {.tabset width="50%" title="Economy in latest year"}
 
 ### Australia vs. US states
 
@@ -211,9 +223,13 @@ cat(paste0(
 
 ### OECD comparison
 
-![](<Economy/oecd_gdp_rank_australia.png>){title="OECD comparison"}
+![](<Economy/oecd_comparison.png>){title="OECD comparison"}
 
-## Column {.tabset width="50%" title="Growth and structure"}
+### Industry composition
+
+![](Economy/industry_shares_au_us.png){title="Industry shares of the economy, Australia and the United States"}
+
+## Column {.tabset .econ-over-time width="50%" title="Economy over time"}
 
 ### GDP
 
@@ -223,17 +239,9 @@ cat(paste0(
 
 ![](<Economy/gdp_per_capita_au_us.png>){title="Real GDP per person, Australia and the United States"}
 
-### Productivity growth
+### Productivity
 
-![](<Economy/productivity_au_us.png>){title="Labour productivity growth, Australia and the United States"}
-
-### Productivity level
-
-![](<Economy/productivity_level_au_us.png>){title="GDP per hour worked, Australia and the United States"}
-
-### Industry composition
-
-![](Economy/industry_shares_au_us.png){title="Industry shares of the economy, Australia and the United States"}
+![](<Economy/productivity_both_au_us.png>){title="Labour productivity, Australia and the United States"}
 
 
 # Intellectual property {orientation="columns"}
@@ -299,39 +307,39 @@ cat(paste0(
 ![](Patents/tm_us_au_coapplied_states.png){title="Joint trade mark filings by state"}
 
 
-# Trade overview {orientation="columns"}
+# Trade overview {orientation="columns" scrolling="true"}
 
-## Column {.tabset width="50%" title="Australia's exports and imports"}
+## Column {width="50%"}
 
-### Exports by partner
+### Row {.tabset height="660px" title="Australia's goods trade"}
 
-![](Trade/dfat_exports_partners_long.png){title="Exports by trading partner"}
+#### Trade by partner
 
-### Imports by partner
+![](Trade/goods_trade_by_partner.png){title="Australia's goods trade by partner"}
 
-![](Trade/dfat_imports_partners_long.png){title="Imports by trading partner"}
+#### Exports by partner
 
-### Exports by sector
+![](Trade/dfat_exports_partners_long.png){title="Goods exports, five largest partners"}
 
-![](Trade/dfat_sector_composition_both.png){title="Exports by sector"}
+#### Imports by partner
 
-### Imports by sector
+![](Trade/dfat_imports_partners_long.png){title="Goods imports, five largest partners"}
 
-![](Trade/dfat_import_shares_by_sector.png){title="Imports by sector"}
+#### Trade by sector
 
-### Services imports by partner
+![](Trade/dfat_sector_composition_both.png){title="Goods trade by sector"}
 
-![](Trade/services_imports_us.png){title="Services imports by source country"}
+### Row {height="600px"}
 
-## Column {.tabset width="50%" title="Trade balances"}
+::: {.card title="Australia's services trade"}
+![](Trade/services_trade_by_partner.png)
+:::
 
-### US trade balance
+## Column {width="50%"}
 
-![](Trade/us_au_trade_balance.png){title="US trade with Australia: exports each way and the US surplus"}
-
-### Services trade balance
-
-![](Trade/abs_services_balance.png){title="Services trade balance"}
+::: {.card .trade-us title="US Trade Balance with Australia"}
+![](Trade/us_au_trade_balance.png)
+:::
 
 
 # Trade in goods
@@ -658,10 +666,6 @@ filter_status
 
 ## Column {.tabset}
 
-### Australia's global share
-
-![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
-
 ### Map
 
 ```{r}
@@ -670,6 +674,10 @@ filter_status
 #| padding: 0
 map
 ```
+
+### Australia's global share
+
+![](<Critical minerals/minerals_au_world_share_us_reliance.png>){title="Australia's share of world production and US import reliance"}
 
 ### Reserves vs production
 
