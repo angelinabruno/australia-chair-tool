@@ -299,9 +299,9 @@ cat(paste0(
 ![](Patents/tm_us_au_coapplied_states.png){title="Joint trade mark filings by state"}
 
 
-# Trade overview {scrolling="true"}
+# Trade overview {orientation="columns"}
 
-## Row {.tabset height="680px" title="Australia's goods trade"}
+## Column {.tabset width="50%" title="Australia's goods trade"}
 
 ### Goods trade by partner
 
@@ -323,15 +323,13 @@ cat(paste0(
 
 ![](Trade/dfat_import_shares_by_sector.png){title="Goods imports by sector"}
 
-## Row {.tabset height="680px" title="Australia's services trade"}
+## Column {.tabset width="50%" title="Australia's services trade"}
 
 ### Services trade by partner
 
 ![](Trade/services_trade_by_partner.png){title="Australia's services trade by partner"}
 
-## Row {.tabset height="680px" title="Australia's trade with the United States (goods and services)"}
-
-### US trade balance
+### US trade (goods and services)
 
 ![](Trade/us_au_trade_balance.png){title="Australia's trade with the United States"}
 

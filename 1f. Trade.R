@@ -1373,15 +1373,17 @@ svc_partner <- bind_rows(
 svc_top <- svc_partner |>
   group_by(partner) |> summarise(two_way = sum(value_m), .groups = "drop") |>
   slice_max(two_way, n = 10) |> arrange(two_way)
+# Ranked by two-way trade (exports + imports), largest first; the rank is in the label
+svc_top <- svc_top |> mutate(label = paste0(rev(seq_len(n())), ". ", partner))
 svc_partner <- svc_partner |>
   filter(partner %in% svc_top$partner) |>
-  mutate(partner = factor(partner, levels = svc_top$partner),
+  mutate(partner = factor(svc_top$label[match(partner, svc_top$partner)], levels = svc_top$label),
          flow = factor(flow, levels = c("Exports", "Imports")),
          value_bn = value_m / 1000)
 svc_tot <- c(Exports = total_row(svc_cr)[year == svc_yr, value_m],
              Imports = total_row(svc_db)[year == svc_yr, value_m])
 
-us_svc <- svc_partner |> filter(partner == "United States")
+us_svc <- svc_partner |> filter(grepl("United States$", partner))
 cat(sprintf("United States: services exports A$%.1fbn, imports A$%.1fbn in %d\n",
             us_svc$value_bn[us_svc$flow == "Exports"], us_svc$value_bn[us_svc$flow == "Imports"], svc_yr))
 
@@ -1391,7 +1393,7 @@ svc_notes <- c(UK = "UK includes the Channel Islands and Isle of Man.",
                Asia = "Asia = Asian countries the ABS does not list separately.",
                Europe = "Europe = European countries the ABS does not list separately.",
                Oceania = "Oceania = Oceanian countries the ABS does not list separately.")
-svc_notes <- svc_notes[names(svc_notes) %in% levels(svc_partner$partner)]
+svc_notes <- svc_notes[names(svc_notes) %in% svc_top$partner]
 
 # Drawn twice, in A$ and US$ (at the calendar year's average rate).
 make_services_partner <- function(cur) {
@@ -1399,9 +1401,9 @@ make_services_partner <- function(cur) {
     mutate(value_bn = if (cur == "USD") aud_to_usd(value_bn, fx_calendar_year(svc_yr)) else value_bn,
            share = 100 * value_m / svc_tot[as.character(flow)])
   ggplot(d, aes(value_bn, partner, fill = flow)) +
-    geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+    geom_col(position = position_dodge(width = 0.8, reverse = TRUE), width = 0.75) +
     geom_text(aes(label = sprintf("%s%.1fbn (%.0f%%)", cur_sym[[cur]], value_bn, share)),
-              position = position_dodge(width = 0.8), hjust = -0.08, size = 2.7,
+              position = position_dodge(width = 0.8, reverse = TRUE), hjust = -0.08, size = 2.7,
               family = "source_sans", colour = csis_colours[["grey"]]) +
     scale_fill_manual(values = c(Exports = csis_colours[["navy"]], Imports = csis_colours[["teal"]]),
                       breaks = c("Exports", "Imports")) +
@@ -1409,8 +1411,9 @@ make_services_partner <- function(cur) {
                        expand = expansion(mult = c(0, 0.25))) +
     labs(
       title = "Australia's services trade by partner",
-      subtitle = paste0("Services exports and imports, ten largest partners, ", cur_sym[[cur]], ", ", svc_yr,
-                        ". Share of each total in brackets."),
+      subtitle = paste0("Services exports and imports, ten largest partners by two-way trade, ", cur_sym[[cur]], ", ",
+                        svc_yr, ".
+Share of each total in brackets."),
       x = NULL, y = NULL,
       caption = paste0("Source: ABS, International Trade: Supplementary Information, Calendar Year ", svc_yr, ".\n",
                        paste(svc_notes, collapse = " "),
@@ -1447,23 +1450,25 @@ goods_partner <- goods_partner_all |>
 goods_top <- goods_partner |>
   group_by(partner) |> summarise(two_way = sum(value_bn), .groups = "drop") |>
   slice_max(two_way, n = 10) |> arrange(two_way)
+# Ranked by two-way trade (exports + imports), largest first; the rank is in the label
+goods_top <- goods_top |> mutate(label = paste0(rev(seq_len(n())), ". ", partner))
 goods_partner <- goods_partner |>
   filter(partner %in% goods_top$partner) |>
-  mutate(partner = factor(partner, levels = goods_top$partner),
+  mutate(partner = factor(goods_top$label[match(partner, goods_top$partner)], levels = goods_top$label),
          flow = factor(flow, levels = c("Exports", "Imports")))
 
 goods_notes <- c(UK = "UK = United Kingdom.",
                  China = "China excludes Hong Kong, Macau and Taiwan.")
-goods_notes <- goods_notes[names(goods_notes) %in% levels(goods_partner$partner)]
+goods_notes <- goods_notes[names(goods_notes) %in% goods_top$partner]
 
 # Drawn twice, in A$ and US$ (at the calendar year's average rate).
 make_goods_partner <- function(cur) {
   d <- goods_partner |>
     mutate(value_bn = if (cur == "USD") aud_to_usd(value_bn, fx_calendar_year(goods_yr)) else value_bn)
   ggplot(d, aes(value_bn, partner, fill = flow)) +
-    geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+    geom_col(position = position_dodge(width = 0.8, reverse = TRUE), width = 0.75) +
     geom_text(aes(label = sprintf("%s%.1fbn (%.0f%%)", cur_sym[[cur]], value_bn, share)),
-              position = position_dodge(width = 0.8), hjust = -0.08, size = 2.7,
+              position = position_dodge(width = 0.8, reverse = TRUE), hjust = -0.08, size = 2.7,
               family = "source_sans", colour = csis_colours[["grey"]]) +
     scale_fill_manual(values = c(Exports = csis_colours[["navy"]], Imports = csis_colours[["teal"]]),
                       breaks = c("Exports", "Imports")) +
@@ -1471,8 +1476,9 @@ make_goods_partner <- function(cur) {
                        expand = expansion(mult = c(0, 0.25))) +
     labs(
       title = "Australia's goods trade by partner",
-      subtitle = paste0("Goods exports and imports, ten largest partners, ", cur_sym[[cur]], ", ", goods_yr,
-                        ". Share of each total in brackets."),
+      subtitle = paste0("Goods exports and imports, ten largest partners by two-way trade, ", cur_sym[[cur]], ", ",
+                        goods_yr, ".
+Share of each total in brackets."),
       x = NULL, y = NULL,
       caption = paste0("Source: DFAT, Australia's goods exports and imports by country and commodity ",
                        "(ABS cat. 5368.0), calendar ", goods_yr, ".\n",
