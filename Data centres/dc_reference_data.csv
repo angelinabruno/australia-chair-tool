@@ -37,3 +37,5 @@ gencost_capex,Capital cost,Large-scale solar PV,1621,A$/kW,2025,"CSIRO and AEMO,
 gencost_capex,Capital cost,Onshore wind,3248,A$/kW,2025,"CSIRO and AEMO, GenCost 2025-26 Final Report, Apx Table B.1",https://www.csiro.au/-/media/Energy/GenCost-2025-26-Final/GenCost_2025-26_Final_Report_20260715.pdf
 gencost_capex,Capital cost,Battery (4 hours),1540,A$/kW,2025,"CSIRO and AEMO, GenCost 2025-26 Final Report, Apx Table B.5 (385 A$/kWh x 4)",https://www.csiro.au/-/media/Energy/GenCost-2025-26-Final/GenCost_2025-26_Final_Report_20260715.pdf
 gencost_capex,Capital cost,Gas open cycle (large),1764,A$/kW,2025,"CSIRO and AEMO, GenCost 2025-26 Final Report, Apx Table B.1",https://www.csiro.au/-/media/Energy/GenCost-2025-26-Final/GenCost_2025-26_Final_Report_20260715.pdf
+grid_share_range,Data centre share of electricity (low),United States,9,%,2030,"EPRI, Powering Intelligence 2026 (February 2026), low scenario (about 45 GW)",https://esca.epri.com/products/3002034696/
+grid_share_range,Data centre share of electricity (high),United States,17,%,2030,"EPRI, Powering Intelligence 2026 (February 2026), high scenario (about 94 GW)",https://esca.epri.com/products/3002034696/

@@ -681,13 +681,20 @@ p11 <- ggplot(pipe, aes(value, item)) +
 save_csis(p11, "11_dc_connection_pipeline.png", height = 4)
 
 # 13c. Data centres' share of grid electricity, Australia vs US
-gs <- bind_rows(ref_get("grid_share"), ref_get("grid_share_low"), ref_get("grid_share_high")) |>
+# Australia: AEMO's 2026 ESOO (NEM, Step Change). US: LBNL's 2023 estimate and
+# its 2028 range, and EPRI's February 2026 range for 2030 (newer and higher).
+# Definitions differ a little: AEMO's share is of NEM operational consumption,
+# LBNL's and EPRI's of total US electricity use.
+gs <- bind_rows(ref_get("grid_share"), ref_get("grid_share_low"), ref_get("grid_share_high"),
+                ref_get("grid_share_range")) |>
   mutate(year = as.integer(substr(period, 1, 4)) + if_else(grepl("-", period), 1L, 0L),
          country = if_else(region == "United States", "United States", "Australia"))
 gs_line <- filter(gs, dataset == "grid_share")
-gs_rng  <- tibble(year = 2028,
-                  lo = gs$value[gs$dataset == "grid_share_low"],
-                  hi = gs$value[gs$dataset == "grid_share_high"])
+gs_rng  <- bind_rows(
+  tibble(year = 2028, src = "LBNL", lo = gs$value[gs$dataset == "grid_share_low"],
+         hi = gs$value[gs$dataset == "grid_share_high"]),
+  gs |> filter(dataset == "grid_share_range") |>
+    summarise(year = first(year), src = "EPRI", lo = min(value), hi = max(value)))
 p12 <- ggplot() +
   geom_linerange(data = gs_rng, aes(x = year, ymin = lo, ymax = hi),
                  colour = csis_colours[["red"]], linewidth = 3, alpha = 0.35) +
@@ -696,20 +703,23 @@ p12 <- ggplot() +
   geom_point(data = gs_line, aes(year, value, colour = country), size = 2.6) +
   geom_text(data = gs_line, aes(year, value, colour = country, label = paste0(value, "%")),
             vjust = -1, size = 3.3, family = "source_sans", show.legend = FALSE) +
-  annotate("text", x = 2028.3, y = gs_rng$hi,
-           label = paste0("US range for 2028: ", gs_rng$lo, "-", gs_rng$hi, "%"),
-           hjust = 0, vjust = 1, size = 3.1, family = "source_sans", colour = csis_colours[["red"]]) +
+  geom_text(data = gs_rng, aes(x = year + 0.3, y = hi,
+                               label = sprintf("US %d, %s: %s-%s%%", year, src, lo, hi)),
+            hjust = 0, vjust = 1, size = 3.1, family = "source_sans", colour = csis_colours[["red"]]) +
   scale_colour_manual(values = c(Australia = csis_colours[["navy"]], `United States` = csis_colours[["red"]])) +
-  scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1), limits = c(0, 15),
+  scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1), limits = c(0, 18),
                      expand = expansion(c(0, 0.02))) +
   scale_x_continuous(breaks = seq(2022, 2036, 2), limits = c(2022, 2037)) +
   labs(title = "Data centres' share of electricity use, Australia and the United States",
-       subtitle = "Actual and forecast share of grid electricity consumption",
+       subtitle = "Actual and forecast share of electricity consumption; bars are forecast ranges",
        x = NULL, y = NULL,
-       caption = paste("Sources: AEMO, 2026 ESOO data centre forecasting overview (NEM, Step Change scenario,",
-                       "financial years shown by the year they end);\nLawrence Berkeley National Laboratory,",
-                       "2024 United States Data Center Energy Usage Report (share of total US electricity use).",
-                       "\nAustralia covers the NEM only (not Western Australia or the Northern Territory)."))
+       caption = paste("Sources: AEMO, 2026 ESOO data centre forecasting overview (NEM operational consumption, Step Change,",
+                       "financial years shown by the year they end);
+Lawrence Berkeley National Laboratory,",
+                       "2024 United States Data Center Energy Usage Report; EPRI, Powering Intelligence 2026",
+                       "(share of total US electricity use).
+Australia covers the NEM only (not Western Australia or",
+                       "the Northern Territory)."))
 save_csis(p12, "12_dc_share_of_grid_au_us.png", height = 5)
 
 # 13d. Transgrid: Sydney basin enquiries vs capacity
@@ -876,9 +886,9 @@ local({
     levels(dem$period)[2]))
   au <- gs_line[gs_line$country == "Australia", ]; au <- au[order(au$year), ]
   takeaway(dc("12_dc_share_of_grid_au_us.png"), sprintf(
-    "AEMO expects data centres' share of NEM electricity use to rise from %s%% in %s to %s%% by %s; US data centres used %s%% of US electricity in 2023.",
-    au$value[1], au$period[1], au$value[nrow(au)], au$period[nrow(au)],
-    gs_line$value[gs_line$country == "United States"]))
+    "AEMO expects data centres' share of NEM electricity use to rise from %s%% in %s to %s%% in 2029-30 and %s%% by %s; EPRI puts the US at %s-%s%% by 2030.",
+    au$value[1], au$period[1], au$value[au$period == "2029-30"], au$value[nrow(au)], au$period[nrow(au)],
+    gs_rng$lo[gs_rng$src == "EPRI"], gs_rng$hi[gs_rng$src == "EPRI"]))
   takeaway(dc("13_transgrid_sydney_capacity.png"), sprintf(
     "Transgrid has more than %s GW of data centre enquiries in Sydney, has signed about %s GW and says up to %s GW more is possible only if data centres pay for the upgrades.",
     tg$value[1], tg$value[2], tg$value[3]))
