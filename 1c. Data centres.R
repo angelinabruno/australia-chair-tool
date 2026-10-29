@@ -26,6 +26,7 @@ library(tidyr)
 library(ggplot2)
 library(scales)
 library(showtext)
+library(patchwork)
 
 
 # 1. Style ----------------------------------------------------------------
@@ -220,7 +221,7 @@ make_p1 <- function(cur) cp_for(cur) %>%
   filter(measure == "Actual", industry == IMT) %>%
   ggplot(aes(date, roll4, colour = asset)) +
   geom_line(linewidth = 0.9) +
-  scale_colour_manual(values = c(csis_colours[["navy"]], csis_colours[["red"]])) +
+  scale_colour_manual(values = c(csis_colours[["navy"]], csis_colours[["teal"]])) +
   scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
   scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
   labs(
@@ -242,7 +243,7 @@ p2 <- cp %>%
   filter(date >= min(date[!is.na(share)])) %>%   # NA quarters stay, so the line breaks
   ggplot(aes(date, share, colour = asset)) +
   geom_line(linewidth = 0.9) +
-  scale_colour_manual(values = c(csis_colours[["navy"]], csis_colours[["red"]])) +
+  scale_colour_manual(values = c(csis_colours[["navy"]], csis_colours[["teal"]])) +
   scale_y_continuous(labels = label_percent(accuracy = 1),
                      expand = expansion(c(0, 0.05)), limits = c(0, NA)) +
   scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
@@ -266,7 +267,7 @@ spaghetti <- function(df, ttl, sub, cur) {
               colour = csis_colours[["ltgrey"]], linewidth = 0.5) +
     geom_line(data = filter(df, industry %in% hl),
               aes(date, plot_val, colour = industry), linewidth = 0.9) +
-    scale_colour_manual(values = setNames(c(csis_colours[["red"]],
+    scale_colour_manual(values = setNames(c(csis_colours[["teal"]],
                                             csis_colours[["navy"]]), hl)) +
     scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
     scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
@@ -369,7 +370,7 @@ make_p4 <- function(cur) {
               aes(fy_end, value, colour = industry), linewidth = 0.9) +
     geom_point(data = filter(d, industry %in% hl, ref_fy == max(ref_fy)),
                aes(fy_end, value, colour = industry), size = 2.2) +
-    scale_colour_manual(values = setNames(c(csis_colours[["red"]],
+    scale_colour_manual(values = setNames(c(csis_colours[["teal"]],
                                             csis_colours[["navy"]]), hl)) +
     scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
     scale_x_continuous(breaks = pretty_breaks(8),
@@ -411,11 +412,6 @@ plot_estimate_paths <- function(ind, ast, ttl, sub, n_years = 8, cur = "AUD") {
                                      "Actual = the four quarters (estimate 7).")))
 }
 
-make_p5 <- function(cur) plot_estimate_paths(
-  "Total", BS,
-  "Buildings and structures capex: estimates and outturn by financial year",
-  "All industries; each line is one financial year, latest in navy", cur = cur)
-save_both(make_p5, "05_actual_vs_expected_bs_total.png", save_csis)
 
 make_p6 <- function(cur) plot_estimate_paths(
   IMT, EPM,
@@ -489,6 +485,22 @@ ggplot(rz, aes(fy, ratio, fill = who)) +
 }
 save_both(make_p7, "07_realisation_ratio_divj_epm.png", save_csis)
 
+# Pairs shown as one image each in the dashboard's "Australian capex detail"
+# panel: firms' plans against what they spent, and spending by industry
+make_p6_7 <- function(cur) {
+  (make_p6(cur) + labs(caption = NULL)) / make_p7(cur) +
+    plot_annotation(title = "Equipment capex: what firms planned and what they spent",
+                    theme = theme_csis())
+}
+save_both(make_p6_7, "06_expected_and_realisation_epm_divj.png", save_csis, height = 10)
+
+make_p3_4 <- function(cur) {
+  (make_p3(cur) + labs(caption = NULL)) / make_p4(cur) +
+    plot_annotation(title = "Equipment, plant and machinery capex by industry: actual and expected",
+                    theme = theme_csis())
+}
+save_both(make_p3_4, "03_epm_by_industry_actual_expected.png", save_csis, height = 10)
+
 
 # 10. IMT capex by financial year -----------------------------------------
 
@@ -507,7 +519,7 @@ ggplot(fy_divj, aes(fy, actual, fill = asset)) +
            size = 2.8, lineheight = 0.9, family = "source_sans",
            colour = csis_colours[["grey"]]) +
   scale_x_discrete(drop = FALSE) +
-  scale_fill_manual(values = c(csis_colours[["navy"]], csis_colours[["red"]])) +
+  scale_fill_manual(values = c(csis_colours[["navy"]], csis_colours[["teal"]])) +
   scale_y_continuous(labels = label_comma(), expand = expansion(c(0, 0.05))) +
   labs(
     title    = "Information Media & Telecommunications capital expenditure by financial year",
@@ -520,37 +532,6 @@ ggplot(fy_divj, aes(fy, actual, fill = asset)) +
 save_both(make_p8, "08_divj_financial_year.png", save_csis)
 
 
-# 11. Real B&S capex (CVM, SA) --------------------------------------------
-
-# kept separate from the current price charts. Real (constant-price) values
-# are converted at one rate, the latest complete financial year's average,
-# so growth rates are the same in both currencies.
-real_fy   <- fy_start(Sys.Date())   # latest complete FY, named by the year it ends in
-real_rate <- fx_financial_year(real_fy)
-
-make_p9 <- function(cur) dat %>%
-  filter(basis == "CVM_SA") %>%
-  mutate(value = if (cur == "USD") value * real_rate else value) %>%
-  ggplot(aes(date, value, colour = industry)) +
-  geom_line(linewidth = 0.9) +
-  facet_wrap(~industry, scales = "free_y", ncol = 1) +
-  scale_colour_manual(values = setNames(c(csis_colours[["red"]],
-                                          csis_colours[["navy"]]),
-                                        c(IMT, "Total"))) +
-  scale_y_continuous(labels = label_comma()) +
-  labs(
-    title    = "Real building and structures capex",
-    subtitle = "Chain volume measures, seasonally adjusted, quarterly",
-    y = y_lab(cur), x = NULL,
-    caption  = paste(SRC, "Chain volume measures, seasonally adjusted.",
-                     if (cur == "USD") sprintf("
-Converted to US$ at the %s average rate.",
-                                               fy_label(real_fy - 1L)) else "")
-  ) +
-  theme(legend.position = "none",
-        strip.text = element_text(face = "bold", hjust = 0,
-                                  colour = csis_colours[["navy"]]))
-save_both(make_p9, "09_real_momentum.png", save_csis, height = 7)
 
 # 12. Takeaways under each chart ------------------------------------------
 
@@ -597,11 +578,6 @@ local({
   takeaway(dc("06_actual_vs_expected_epm_divj.png"), line6("AUD"), line6("USD"))
   takeaway(dc("04_epm_expected_by_industry.png"), line6("AUD"), line6("USD"))
 
-  b <- estimates_for("AUD") %>% filter(industry == "Total", asset == BS, est == latest_est$est) %>%
-    arrange(ref_fy)
-  takeaway(dc("05_actual_vs_expected_bs_total.png"), sprintf(
-    "Estimate %d for all-industry building spending in %s is %.0f%% above the same estimate a year earlier.",
-    latest_est$est, fy_label(max(b$ref_fy)), 100 * (b$value[nrow(b)] / b$value[nrow(b) - 1] - 1)))
 
   e3 <- cp %>% filter(measure == "Actual", asset == EPM, industry == IMT, !is.na(roll4)) %>%
     slice_max(date, n = 1)
@@ -614,11 +590,6 @@ local({
   takeaway(dc("03_epm_actual_by_industry.png"), line3(e3$roll4, m3$roll4, "A$"),
            line3(e3u$roll4[e3u$industry == IMT], e3u$roll4[e3u$industry == "Mining"], "US$"))
 
-  r9 <- dat %>% filter(basis == "CVM_SA", industry == IMT) %>% arrange(date)
-  g9 <- r9$value[nrow(r9)] / r9$value[nrow(r9) - 4] - 1
-  takeaway(dc("09_real_momentum.png"), sprintf(
-    "After removing price changes, the industry's building spending was %.0f%% higher in the %s quarter than a year earlier.",
-    100 * g9, format(max(r9$date), "%B %Y")))
 })
 
 
@@ -861,7 +832,7 @@ make_p16 <- function(cur) {
               family = "source_sans", colour = csis_colours[["grey"]]) +
     scale_fill_manual(values = c(`TRUE` = csis_colours[["red"]], `FALSE` = "#E8A9AB"), guide = "none") +
     scale_x_continuous(labels = label_dollar(prefix = cur_sym[[cur]]), expand = expansion(c(0, 0.15))) +
-    labs(title = "Average industrial electricity price, US data centre states",
+    labs(title = "US benchmark: industrial electricity prices in data centre states",
          subtitle = paste0("Average retail price to industrial customers, ", eia_yr, ", ", cur_sym[[cur]], " per MWh"),
          x = NULL, y = NULL,
          caption = paste0("Source: US EIA, Electric Power Annual, Table 2.10 (published in US cents per kWh).",

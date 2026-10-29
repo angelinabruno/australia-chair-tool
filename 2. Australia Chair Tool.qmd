@@ -711,10 +711,6 @@ map
 
 ![](Energy/02_state_fuel_mix.png){title="Electricity generation mix by state"}
 
-### Data centre demand
-
-![](<Data centres/12_dc_share_of_grid_au_us.png>){title="Data centres' share of electricity use, Australia and the United States"}
-
 ## Column {.tabset width="50%" title="Relative costs and prices"}
 
 ### Wholesale prices, Australia vs US
@@ -759,15 +755,11 @@ map
 
 ## Row {height="640px"}
 
-### Column {.tabset title="Power and demand"}
+### Column {.tabset .dc-au width="50%" title="Australia: demand and the grid"}
 
 #### Demand by NEM region
 
 ![](<Data centres/10_dc_demand_by_region.png>){title="Data centre electricity demand by NEM region"}
-
-#### Share of electricity use
-
-![](<Data centres/12_dc_share_of_grid_au_us.png>){title="Data centres' share of electricity use, Australia and the US"}
 
 #### Connection pipeline
 
@@ -777,7 +769,28 @@ map
 
 ![](<Data centres/13_transgrid_sydney_capacity.png>){title="Sydney data centre connection enquiries and capacity"}
 
-### Column {.tabset title="Investment"}
+#### Share of electricity use
+
+![](<Data centres/12_dc_share_of_grid_au_us.png>){title="Data centres' share of electricity use, Australia and the US"}
+
+### Column {.tabset .dc-au width="50%" title="Australia: investment"}
+
+#### Projects and commitments
+
+```{r}
+#| echo: false
+#| output: asis
+# Hand-maintained (Data centres/dc_projects_tracker.csv): official or company pages only
+trk <- read.csv("Data centres/dc_projects_tracker.csv", comment.char = "#", stringsAsFactors = FALSE)
+cell <- function(x) ifelse(is.na(x) | x == "", "&ndash;", htmltools::htmlEscape(as.character(x)))
+amt  <- ifelse(is.na(trk$amount_aud_bn), "&ndash;", sprintf("A&#36;%sbn", trk$amount_aud_bn))
+rows <- sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"num\">%s</td><td>%s</td><td><a href=\"%s\" target=\"_blank\" rel=\"noopener\">source</a></td></tr>",
+                cell(trk$type), cell(trk$name), cell(trk$location), cell(trk$company), amt, cell(trk$period), trk$url)
+cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitment</th><th>Location</th><th>Company</th><th>Value</th><th>Period</th><th></th></tr></thead><tbody>',
+    paste(rows, collapse = ""), '</tbody></table>',
+    '<p class="dc-note">NSW Investment Delivery Authority projects are listed by name only; the NSW Government gives a total (15 projects, A&#36;51.89bn) but not values for each project, and names 14 of the 15. ',
+    'Only figures stated on an official government or company page are included.</p></div>')
+```
 
 #### Capex by financial year
 
@@ -787,10 +800,6 @@ map
 
 ![](<Data centres/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
 
-#### Expected equipment spending
-
-![](<Data centres/06_actual_vs_expected_epm_divj.png>){title="Equipment capex: estimates and outturn by financial year"}
-
 #### Commercial buildings
 
 ![](<Data centres/14_commercial_nec_building.png>){title="Commercial buildings n.e.c.: work done and approvals"}
@@ -799,11 +808,9 @@ map
 
 ![](<Data centres/15_computer_imports.png>){title="Imports of computers and parts"}
 
-### Column {.tabset title="Cost to build and run"}
+## Row {height="640px"}
 
-#### US industrial power prices
-
-![](<Data centres/16_us_industrial_power_prices.png>){title="Industrial electricity prices, US data centre states"}
+### Column {.tabset .dc-au width="50%" title="Australia: costs and policy"}
 
 #### Costs compared
 
@@ -836,24 +843,17 @@ Sources: [Clayton Utz](https://www.claytonutz.com/insights/2026/march/great-expe
 
 </div>
 
-## Row {.tabset height="640px" title="More detail"}
+### Column {.tabset .dc-us width="50%" title="US benchmarks"}
 
-### Projects and commitments
+#### Industrial power prices
 
-```{r}
-#| echo: false
-#| output: asis
-# Hand-maintained (Data centres/dc_projects_tracker.csv): official or company pages only
-trk <- read.csv("Data centres/dc_projects_tracker.csv", comment.char = "#", stringsAsFactors = FALSE)
-cell <- function(x) ifelse(is.na(x) | x == "", "&ndash;", htmltools::htmlEscape(as.character(x)))
-amt  <- ifelse(is.na(trk$amount_aud_bn), "&ndash;", sprintf("A&#36;%sbn", trk$amount_aud_bn))
-rows <- sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"num\">%s</td><td>%s</td><td><a href=\"%s\" target=\"_blank\" rel=\"noopener\">source</a></td></tr>",
-                cell(trk$type), cell(trk$name), cell(trk$location), cell(trk$company), amt, cell(trk$period), trk$url)
-cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitment</th><th>Location</th><th>Company</th><th>Value</th><th>Period</th><th></th></tr></thead><tbody>',
-    paste(rows, collapse = ""), '</tbody></table>',
-    '<p class="dc-note">NSW Investment Delivery Authority projects are listed by name only; the NSW Government gives a total (15 projects, A&#36;51.89bn) but not values for each project, and names 14 of the 15. ',
-    'Only figures stated on an official government or company page are included.</p></div>')
-```
+![](<Data centres/16_us_industrial_power_prices.png>){title="US benchmark: industrial electricity prices in data centre states"}
+
+#### Generation mix, US data centre states
+
+![](Energy/02_state_fuel_mix.png){title="US benchmark: generation mix in the main data centre states, with Australia"}
+
+## Row {.tabset .dc-au height="640px" title="Australian capex detail (ABS)"}
 
 ### Investment by asset
 
@@ -861,23 +861,11 @@ cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitm
 
 ### Equipment by industry
 
-![](<Data centres/03_epm_actual_by_industry.png>){title="Equipment, plant and machinery capex by industry"}
+![](<Data centres/03_epm_by_industry_actual_expected.png>){title="Equipment, plant and machinery capex by industry: actual and expected"}
 
-### Expected equipment by industry
+### Plans and outturn
 
-![](<Data centres/04_epm_expected_by_industry.png>){title="Expected equipment capex by industry, same estimate each year"}
-
-### Expected buildings, all industries
-
-![](<Data centres/05_actual_vs_expected_bs_total.png>){title="Buildings and structures capex: estimates and outturn"}
-
-### Realisation ratio
-
-![](<Data centres/07_realisation_ratio_divj_epm.png>){title="Realisation ratio: outturn over first estimate"}
-
-### Real building capex
-
-![](<Data centres/09_real_momentum.png>){title="Real building and structures capex"}
+![](<Data centres/06_expected_and_realisation_epm_divj.png>){title="Equipment capex: what firms planned and what they spent"}
 
 
 # Human capital {orientation="columns"}
