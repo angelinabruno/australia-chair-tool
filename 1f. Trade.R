@@ -654,7 +654,7 @@ scale_fill_csis <- function(...) {
 }
 
 DFAT_SOURCE <- paste0(
-  "Source: DFAT, Australia's merchandise exports and imports country ",
+  "Source: DFAT, Australia's goods exports and imports country ",
   "and commodity pivot table (ABS cat. 5368.0), calendar years."
 )
 
@@ -800,7 +800,7 @@ p_shares <- ggplot(plot_dat, aes(year, share, colour = sector, group = sector)) 
     expand = expansion(mult = c(0, 0.06))
   ) +
   labs(
-    title    = "Share of total merchandise exports by broad sector, 2006-2025",
+    title    = "Share of total goods exports by broad sector, 2006-2025",
     #subtitle = "Share of total merchandise exports by broad sector, 2006-2025",
     caption  = paste0(
       DFAT_SOURCE,
@@ -808,7 +808,7 @@ p_shares <- ggplot(plot_dat, aes(year, share, colour = sector, group = sector)) 
       "groups. Shares are calculated against total exports.",
       "\n'Other goods' includes confidential items of trade and non-monetary gold."
     ),
-    x = NULL, y = "Share of total merchandise exports"
+    x = NULL, y = "Share of total goods exports"
   ) +
   theme_csis() +
   theme(legend.position = "none")
@@ -832,8 +832,8 @@ p_area <- ggplot(plot_dat, aes(year, share, fill = sector)) +
   scale_y_continuous(labels = label_percent(accuracy = 1),
                      expand = expansion(mult = c(0, 0))) +
   labs(
-    title    = "Composition of Australia's merchandise exports",
-    subtitle = "Share of total merchandise exports by broad sector, 2006-2025",
+    title    = "Composition of Australia's goods exports",
+    subtitle = "Share of total goods exports by broad sector, 2006-2025",
     caption  = DFAT_SOURCE,
     x = NULL, y = NULL
   ) +
@@ -905,8 +905,11 @@ dfat_countries <- read_csv("dfat_exports_by_country.csv",
     )
   )
 
-top5 <- c("China", "Japan", "United States of America",
-          "South Korea", "India")
+# The five largest destinations in the latest year
+top5 <- dfat_countries |>
+  filter(year == max(year)) |>
+  slice_max(exports_k, n = 5) |>
+  pull(country)
 
 missing <- setdiff(top5, unique(dfat_countries$country))
 if (length(missing) > 0) {
@@ -977,13 +980,13 @@ ggplot(plot_dat,
   ) +
   labs(
     #title    = "China's rise reshaped Australia's export base",
-    title = "Merchandise exports",
+    title = "Goods exports",
     subtitle = paste0("By destination, ", cur_sym[[cur]], " billion, 2006-", max(plot_dat$year),
                       ". Labels show each partner's rank among all destinations in ", max(plot_dat$year), "."),
     caption  = paste0(
-      "Source: DFAT, Australia's merchandise exports and imports country ",
+      "Source: DFAT, Australia's goods exports and imports country ",
       "and commodity pivot table (ABS cat. 5368.0), calendar years.",
-      "\nNote: merchandise (goods) only. Not comparable in level with ABS ",
+      "\nNote: goods only. Not comparable in level with ABS ",
       "series covering goods and services.",
       if (cur == "USD") fx_note[["USD"]] else ""
     ),
@@ -1026,13 +1029,13 @@ p_shares_long <- ggplot(plot_dat,
                      expand = expansion(mult = c(0, 0.08))) +
   labs(
     #title    = "A third of Australia's goods exports go to a single market",
-    title = "Share of total merchandise exports",
+    title = "Share of total goods exports",
     subtitle = "By destination, 2006-2025",
     caption  = paste0(
-      "Source: DFAT, Australia's merchandise exports and imports country ",
+      "Source: DFAT, Australia's goods exports and imports country ",
       "and commodity pivot table (ABS cat. 5368.0), calendar years."
     ),
-    x = NULL, y = "Share of total merchandise exports"
+    x = NULL, y = "Share of total goods exports"
   ) +
   theme_csis() +
   theme(legend.position = "none")
@@ -1118,7 +1121,7 @@ top5_dfat <- trade_country |>
   slice_max(value_k, n = 5) |>
   pull(country)
 
-top5_imports <- top5_abs        # <- change to top5_dfat if preferred
+top5_imports <- top5_dfat       # the five largest sources in the latest year
 
 message("ABS five:  ", paste(top5_abs,  collapse = ", "))
 message("DFAT five: ", paste(top5_dfat, collapse = ", "))
@@ -1178,11 +1181,11 @@ plot_partner_series <- function(dat, yvar, ylab, y_scale,
 }
 
 DFAT_SRC <- paste0(
-  "Source: DFAT, Australia's merchandise exports and imports country ",
+  "Source: DFAT, Australia's goods exports and imports country ",
   "and commodity pivot table (ABS cat. 5368.0), calendar years."
 )
 GOODS_NOTE <- paste0(
-  "\nNote: merchandise (goods) only. Not comparable in level with ABS ",
+  "\nNote: goods only. Not comparable in level with ABS ",
   "series covering goods and services."
 )
 
@@ -1199,7 +1202,7 @@ make_imports_long <- function(cur) plot_partner_series(
   scale_y_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "b", accuracy = 1),
                      limits = c(0, NA), expand = expansion(mult = c(0, 0.08))),
   #title    = "China supplies more than a quarter of Australia's goods imports",
-   title = "Merchandise imports by origin",
+   title = "Goods imports by origin",
   subtitle = paste0(cur_sym[[cur]], " billion, 2006-", max(imports_long$year),
                     ". Labels show each partner's rank among all sources in ", max(imports_long$year), "."),
   caption  = paste0(DFAT_SRC, GOODS_NOTE,
@@ -1216,11 +1219,11 @@ save_both(make_imports_long, "dfat_imports_partners_long.png",
 # ---------------------------------------------------------------
 
 p_imports_share <- plot_partner_series(
-  imports_long, share, "Share of total merchandise imports",
+  imports_long, share, "Share of total goods imports",
   scale_y_continuous(labels = label_percent(accuracy = 1),
                      limits = c(0, NA), expand = expansion(mult = c(0, 0.08))),
   #title    = "Import sourcing has concentrated on a single supplier",
-   title = "Share of total merchandise imports",
+   title = "Share of total goods imports",
   subtitle = "By origin, 2006-2025",
   caption  = DFAT_SRC
 )
@@ -1277,13 +1280,13 @@ p_imports_sector <- ggplot(imp_plot, aes(year, share, colour = sector, group = s
                      limits = c(0, NA), expand = expansion(mult = c(0, 0.06))) +
   labs(
     #title    = "Australia imports mostly manufactured goods",
-    title = "Share of total merchandise imports",
+    title = "Share of total goods imports",
     subtitle = "By broad sector, 2006-2025",
     caption  = paste0(
       DFAT_SRC,
       "\nSectors are DFAT's four-way aggregation of SITC Rev. 4 3-digit groups."
     ),
-    x = NULL, y = "Share of total merchandise imports"
+    x = NULL, y = "Share of total goods imports"
   ) +
   theme_csis() +
   theme(legend.position = "none")
@@ -1314,8 +1317,8 @@ p_both <- ggplot(sec_latest |> mutate(sector = factor(sector, levels = sec_order
                     breaks = c("Exports", "Imports")) +
   scale_x_continuous(labels = label_percent(accuracy = 1), expand = expansion(mult = c(0, 0.12))) +
   labs(
-    title = "Merchandise trade by sector",
-    subtitle = paste0("Share of all merchandise exports and of all merchandise imports, calendar ", sec_yr),
+    title = "Goods trade by sector",
+    subtitle = paste0("Share of all goods exports and of all goods imports, calendar ", sec_yr),
     caption  = paste0(DFAT_SRC, "
 Sectors are DFAT's four-way grouping of SITC 3-digit products."),
     x = NULL, y = NULL
@@ -1421,6 +1424,70 @@ make_services_partner <- function(cur) {
 
 save_both(make_services_partner, "services_trade_by_partner.png",
           function(p, f) ggsave(f, p, width = 8.5, height = 6.2, dpi = 150, bg = "white"))
+
+# ---------------------------------------------------------------
+# Goods trade by partner: exports and imports, latest year
+# Source: DFAT country and commodity pivot table (dfat_trade_by_country.csv)
+# ---------------------------------------------------------------
+# Same layout as the services chart above: the ten largest partners by
+# two-way goods trade, exports and imports side by side.
+GOODS_DROP <- "(?i)unknown|confidential|stores|no country|unallocated|not elsewhere|nes$"
+GOODS_SHORT <- c("United States"            = "United States",
+                 "United States of America" = "United States",
+                 "Republic of Korea"        = "South Korea",
+                 "United Kingdom"           = "UK",
+                 "Hong Kong (SAR of China)" = "Hong Kong")
+goods_partner_all <- read_csv("dfat_trade_by_country.csv", show_col_types = FALSE)
+goods_yr <- max(goods_partner_all$year)
+goods_partner <- goods_partner_all |>
+  filter(year == goods_yr, !grepl(GOODS_DROP, country, perl = TRUE)) |>
+  mutate(flow = if_else(trade_type == "Total Exports", "Exports", "Imports"),
+         partner = if_else(country %in% names(GOODS_SHORT), GOODS_SHORT[country], country),
+         value_bn = value_k / 1e6, share = 100 * value_k / total_k)
+goods_top <- goods_partner |>
+  group_by(partner) |> summarise(two_way = sum(value_bn), .groups = "drop") |>
+  slice_max(two_way, n = 10) |> arrange(two_way)
+goods_partner <- goods_partner |>
+  filter(partner %in% goods_top$partner) |>
+  mutate(partner = factor(partner, levels = goods_top$partner),
+         flow = factor(flow, levels = c("Exports", "Imports")))
+
+goods_notes <- c(UK = "UK = United Kingdom.",
+                 China = "China excludes Hong Kong, Macau and Taiwan.")
+goods_notes <- goods_notes[names(goods_notes) %in% levels(goods_partner$partner)]
+
+# Drawn twice, in A$ and US$ (at the calendar year's average rate).
+make_goods_partner <- function(cur) {
+  d <- goods_partner |>
+    mutate(value_bn = if (cur == "USD") aud_to_usd(value_bn, fx_calendar_year(goods_yr)) else value_bn)
+  ggplot(d, aes(value_bn, partner, fill = flow)) +
+    geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+    geom_text(aes(label = sprintf("%s%.1fbn (%.0f%%)", cur_sym[[cur]], value_bn, share)),
+              position = position_dodge(width = 0.8), hjust = -0.08, size = 2.7,
+              family = "source_sans", colour = csis_colours[["grey"]]) +
+    scale_fill_manual(values = c(Exports = csis_colours[["navy"]], Imports = csis_colours[["teal"]]),
+                      breaks = c("Exports", "Imports")) +
+    scale_x_continuous(labels = label_dollar(prefix = cur_sym[[cur]], suffix = "bn"),
+                       expand = expansion(mult = c(0, 0.25))) +
+    labs(
+      title = "Australia's goods trade by partner",
+      subtitle = paste0("Goods exports and imports, ten largest partners, ", cur_sym[[cur]], ", ", goods_yr,
+                        ". Share of each total in brackets."),
+      x = NULL, y = NULL,
+      caption = paste0("Source: DFAT, Australia's goods exports and imports by country and commodity ",
+                       "(ABS cat. 5368.0), calendar ", goods_yr, ".\n",
+                       paste(goods_notes, collapse = " "),
+                       if (cur == "USD") fx_note[["USD"]] else "")
+    ) +
+    theme_csis() +
+    theme(panel.grid.major.y = element_blank(),
+          panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4),
+          axis.line.x = element_blank(), axis.ticks.x = element_blank())
+}
+
+save_both(make_goods_partner, "goods_trade_by_partner.png",
+          function(p, f) ggsave(f, p, width = 8.5, height = 6.2, dpi = 150, bg = "white"))
+
 
 
 
@@ -1836,11 +1903,11 @@ fwrite(goods[, .(flow, year, us_Am = us, total_Am = total,
 # ---- Charts: one per direction ----------------------------------------------
 goods_meta <- list(
   Exports = list(colour = flow_meta$Credits$colour,
-                 title  = "US share of Australia's merchandise exports",
+                 title  = "US share of Australia's goods exports",
                  short  = "exports (FOB value)",
                  tab    = "1"),
   Imports = list(colour = flow_meta$Debits$colour,
-                 title  = "US share of Australia's merchandise imports",
+                 title  = "US share of Australia's goods imports",
                  short  = "imports (customs value)",
                  tab    = "2")
 )
@@ -1857,8 +1924,8 @@ for (fl in names(goods_meta)) {
                        limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
     scale_x_continuous(breaks = pretty_breaks(n = 8)) +
     labs(title    = gm$title,
-         subtitle = sprintf("United States as a share of total Australian merchandise %s, calendar years", gm$short),
-         caption  = sprintf("Source: ABS, International Trade: Supplementary Information, Calendar Year (Table %s). Merchandise trade basis.", gm$tab),
+         subtitle = sprintf("United States as a share of total Australian goods %s, calendar years", gm$short),
+         caption  = sprintf("Source: ABS, International Trade: Supplementary Information, Calendar Year (Table %s). Goods trade basis.", gm$tab),
          x = NULL, y = "Share of total (%)") +
     theme_dash
   
@@ -1868,7 +1935,7 @@ for (fl in names(goods_meta)) {
   export_chart_csv(p, file.path(out_dir, paste0(stem, ".csv")),
                    y_format = "percent",
                    notes = paste("Six-month aggregates summed to calendar years.",
-                                 "Merchandise trade basis, not balance of payments;",
+                                 "Goods trade basis, not balance of payments;",
                                  "not directly comparable with the services totals."))
 }
 
@@ -2000,7 +2067,7 @@ theme_dash <- theme_minimal(base_size = 11) +
         plot.caption     = element_text(hjust = 0, colour = "grey40", size = 8),
         panel.grid.minor = element_blank())
 
-src_caption <- "Source: DFAT country and SITC pivot tables (ABS International Trade in Goods), calendar years. Merchandise trade basis."
+src_caption <- "Source: DFAT country and SITC pivot tables (ABS International Trade in Goods), calendar years. Goods trade basis."
 
 # ---- One chart per flow x industry ------------------------------------------
 # Clear last run's charts first: the number in each file name is the

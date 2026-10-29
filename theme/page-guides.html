@@ -171,7 +171,22 @@ and Tasmania.</li>
       body.appendChild(t.content.cloneNode(true));
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
     });
+    // Top right of the panel header; if the tabs run underneath it (full-width
+    // panels), move it under the panel title instead.
     header.appendChild(a);
+    var place = function () {
+      var r = a.getBoundingClientRect();
+      if (!r.width) return;
+      var hit = Array.prototype.some.call(header.querySelectorAll(".nav-link"), function (t) {
+        var q = t.getBoundingClientRect();
+        return !(r.right < q.left || r.left > q.right || r.bottom < q.top || r.top > q.bottom);
+      });
+      var title = header.querySelector(".card-title");
+      if (hit && title && !a.classList.contains("inline")) { a.classList.add("inline"); title.appendChild(a); }
+    };
+    document.addEventListener("shown.bs.tab", place);
+    window.addEventListener("resize", place);
+    setTimeout(place, 0);
   });
 })();
 </script>

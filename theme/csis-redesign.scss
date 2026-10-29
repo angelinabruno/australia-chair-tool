@@ -256,3 +256,12 @@ $border-radius:           6px;
 #page-guide-modal .page-guide-body { font-size: 0.92rem; line-height: 1.5; }
 #page-guide-modal .page-guide-body li { margin-bottom: 6px; }
 @media (max-width: 640px) { .page-guide-link { position: static; display: block; margin-top: 4px; } }
+
+.page-guide-link.inline { position: static; display: block; margin: 2px 0 0; font-weight: 400; }
+
+// Trade overview scrolls through goods, services and US sections: keep each
+// chart to about one screen
+#trade-overview .card { max-height: 640px; }
+#trade-overview .card img { max-height: 540px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; display: block; }
+#trade-overview .card-body { overflow: hidden !important; }
+#trade-overview .card img { max-height: 520px; }
