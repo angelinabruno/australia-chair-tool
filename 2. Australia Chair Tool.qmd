@@ -695,7 +695,7 @@ map
 
 ![](Energy/05_renewables_composition.png){title="Australian renewable generation by technology"}
 
-### Targets, Australia vs US
+### Targets
 
 ![](Energy/04_renewables_vs_target.png){title="Clean electricity targets, Australia and the United States"}
 
