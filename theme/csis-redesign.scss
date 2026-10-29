@@ -98,13 +98,14 @@ $border-radius:           6px;
 
 // Headline numbers
 .ov-stats {
-  display: grid; gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  display: grid; gap: 14px;
+  // All six headline numbers on one line on a desktop screen
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: -34px; position: relative; z-index: 2; padding: 0 24px;
 }
 .ov-stat {
   display: block; text-decoration: none !important; color: inherit;
-  background: #fff; border-radius: 8px; padding: 18px 18px 16px;
+  background: #fff; border-radius: 8px; padding: 16px 14px 14px;
   border-top: 4px solid $gold;
   box-shadow: 0 6px 18px rgba(0, 32, 91, 0.10);
   transition: transform .15s ease, box-shadow .15s ease;
@@ -112,10 +113,12 @@ $border-radius:           6px;
 .ov-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 32, 91, 0.16); }
 .ov-stat-num {
   font-family: $headings-font-family; font-weight: 600; color: $navy;
-  font-size: 2.1rem; line-height: 1.1; margin-bottom: 6px; white-space: nowrap;
+  font-size: 1.8rem; line-height: 1.1; margin-bottom: 6px; white-space: nowrap;
   small { font-size: 0.6em; margin-left: 2px; color: $muted; font-family: $font-family-sans-serif; font-weight: 600; }
 }
-.ov-stat-label { color: $ink; font-size: 0.95rem; line-height: 1.35; }
+.ov-stat-label { color: $ink; font-size: 0.9rem; line-height: 1.35; }
+@media (max-width: 1200px) { .ov-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px)  { .ov-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ov-stat-num { font-size: 1.45rem; } }
 .ov-stat-note { color: $muted; font-size: 0.78rem; margin-top: 8px; }
 
 // Explore grid

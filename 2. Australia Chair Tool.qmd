@@ -70,15 +70,13 @@ min_tbl <- safely_num(read_csv("Critical minerals/minerals_au_us_tidy.csv", show
 li <- safely_num(min_tbl |> filter(mineral == "Lithium"))
 n_top3 <- safely_num(sum(min_tbl$au_world_rank <= 3, na.rm = TRUE))
 
-# Patents with a US applicant (IP Australia); the file starts with a metadata block
-pat_lines <- safely_num(readLines("Patents/us_applicants_count.csv", warn = FALSE))
+# US share of Australian patent applications (IP Australia, from '1h. Patents.R')
 pat <- safely_num({
-  rows <- grep("^[0-9]{4},[0-9]+$", pat_lines, value = TRUE)
-  d <- read.csv(text = rows, header = FALSE, col.names = c("year", "n"))
+  d <- read.csv("Patents/annual_us_applicants.csv")
   # The chart runs to last year with recent years shaded as incomplete; the
   # headline number uses the latest complete year (as in '1h. Patents.R').
-  d <- d[d$year <= as.integer(format(Sys.Date(), "%Y")) - 3L, ]
-  d[which.max(d$year), ]
+  d <- d[d$filing_year <= as.integer(format(Sys.Date(), "%Y")) - 3L, ]
+  d[which.max(d$filing_year), ]
 })
 
 stat <- function(page, num, label, note) sprintf(
@@ -101,9 +99,9 @@ stats <- c(
   stat("critical-minerals", sprintf("%.0f%%", li$au_share_world_production_pct),
        sprintf("Australia's share of world lithium output, the %s producer", largest(li$au_world_rank)),
        sprintf("Top three producer of %d critical minerals", n_top3)),
-  stat("intellectual-property", format(pat$n, big.mark = ","),
-       "Australian patent applications with a US applicant",
-       sprintf("Filed in %s", pat$year))
+  stat("intellectual-property", sprintf("%.0f%%", 100 * pat$share_us),
+       "Share of Australian patent applications with a US applicant",
+       sprintf("Standard patents first filed in %s", pat$filing_year))
 )
 
 tile <- function(page, title, text, img) {
