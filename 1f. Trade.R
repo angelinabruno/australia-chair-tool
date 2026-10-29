@@ -2176,6 +2176,10 @@ bn_label <- function(x) ifelse(x < 0, paste0("-", sym, abs(x), "b"), paste0(sym,
 
 ggplot() +
   geom_col(data = bal, aes(year, surplus, fill = "US trade surplus"), width = 0.7) +
+  geom_line(data = bal, aes(year, surplus_ex_gold, linetype = "US surplus excluding gold"),
+            colour = csis_colours[["grey"]], linewidth = 0.6) +
+  geom_point(data = bal, aes(year, surplus_ex_gold), shape = 21, size = 1.4,
+             colour = csis_colours[["grey"]], fill = "white") +
   geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.5) +
   geom_line(data = flows, aes(year, value, colour = series), linewidth = 1) +
   geom_point(data = flows, aes(year, value, colour = series), size = 1.6) +
@@ -2190,10 +2194,12 @@ ggplot() +
            colour = csis_colours[["navy"]]) +
   scale_colour_manual(values = setNames(unname(csis_colours[c("navy", "red")]), flow_levels)) +
   scale_fill_manual(values = c("US trade surplus" = "#F7D98B")) +
+  scale_linetype_manual(values = c("US surplus excluding gold" = "22")) +
   scale_y_continuous(labels = bn_label, breaks = scales::pretty_breaks(8)) +
   scale_x_continuous(breaks = scales::pretty_breaks(8),
                      expand = expansion(mult = c(0.01, 0.15))) +
-  guides(colour = guide_legend(order = 1), fill = guide_legend(order = 2)) +
+  guides(colour = guide_legend(order = 1), fill = guide_legend(order = 2),
+         linetype = guide_legend(order = 3)) +
   labs(
     title    = "Australia's trade with the United States",
     subtitle = paste0(if (INCLUDE_SERVICES) "Goods and services" else "Goods", ", calendar years"),
@@ -2203,7 +2209,7 @@ ggplot() +
       if (INCLUDE_SERVICES) "; ABS, International Trade: Supplementary Information, Calendar Year" else "",
       ".\nUS surplus = Australian imports from the US less Australian exports to the US.",
       "
-Gold = SITC 971, non-monetary gold.",
+Excluding gold removes SITC 971 (non-monetary gold) from both exports and imports.",
       if (cur == "USD") fx_note[["USD"]] else ""
     )
   ) +

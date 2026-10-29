@@ -305,15 +305,15 @@ cat(paste0(
 
 ### Row {.tabset height="660px" title="Australia's goods trade"}
 
-#### Goods trade by partner
+#### Trade by partner
 
 ![](Trade/goods_trade_by_partner.png){title="Australia's goods trade by partner"}
 
-#### Goods exports by partner
+#### Exports by partner
 
 ![](Trade/dfat_exports_partners_long.png){title="Goods exports, five largest partners"}
 
-#### Goods imports by partner
+#### Imports by partner
 
 ![](Trade/dfat_imports_partners_long.png){title="Goods imports, five largest partners"}
 
