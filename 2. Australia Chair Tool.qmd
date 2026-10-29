@@ -229,7 +229,7 @@ cat(paste0(
 
 ![](Economy/industry_shares_au_us.png){title="Industry shares of the economy, Australia and the United States"}
 
-## Column {.tabset width="50%" title="Economy over time"}
+## Column {.tabset .econ-over-time width="50%" title="Economy over time"}
 
 ### GDP
 

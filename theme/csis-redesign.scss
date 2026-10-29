@@ -273,3 +273,7 @@ $border-radius:           6px;
 // Productivity) shrink to fit their card rather than scrolling inside it
 #economic-indicators .card-body { overflow: hidden !important; }
 #economic-indicators .card-body img { max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }
+// ...except the growth-and-level charts on the right, which keep full width:
+// scroll down within the card to the level chart
+#economic-indicators .econ-over-time .card-body { overflow-y: auto !important; }
+#economic-indicators .econ-over-time .card-body img { max-height: none; width: 100%; }

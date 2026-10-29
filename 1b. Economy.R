@@ -161,6 +161,58 @@ index_to <- function(df, base_year) {
     ungroup()
 }
 
+GDP_MEASURE_NOTE <- "\nChain volume measures (Australia) and chained dollars (US), seasonally adjusted."
+
+# Growth on top (through the year, zoomed so that ordinary years are visible)
+# and level below (index, 2019 = 100), both from 2000, Australia against the
+# US. Used for the dashboard's GDP, GDP per person and Productivity tabs so the
+# three read the same way. df has date, value and country, quarterly.
+GROWTH_YLIM <- c(-4.5, 6.5)
+growth_and_level <- function(df, title, measure, caption, base_year = 2019) {
+  d <- df |>
+    mutate(date = floor_date(date, "quarter")) |>
+    arrange(country, date) |>
+    group_by(country) |>
+    mutate(yoy   = 100 * (value / lag(value, 4) - 1),
+           index = 100 * value / mean(value[year(date) == base_year], na.rm = TRUE)) |>
+    ungroup() |>
+    filter(date >= as.Date("2000-01-01"))
+  # Values beyond the zoomed axis, given in the subtitle
+  off <- d |>
+    filter(!is.na(yoy)) |>
+    group_by(country) |>
+    summarise(lo = if (any(yoy < GROWTH_YLIM[1])) sprintf("%+.1f%%", min(yoy)) else NA_character_,
+              hi = if (any(yoy > GROWTH_YLIM[2])) sprintf("%+.1f%%", max(yoy)) else NA_character_,
+              .groups = "drop") |>
+    filter(!is.na(lo) | !is.na(hi)) |>
+    mutate(txt = paste(sub("United States", "US", country),
+                       ifelse(is.na(lo), hi, ifelse(is.na(hi), lo, paste(lo, "to", hi)))))
+  note <- if (nrow(off) == 0) "" else
+    paste0("\nThe largest swings run off the scale (", paste(off$txt, collapse = "; "), ").")
+  x_dates <- scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"),
+                          date_labels = "%Y", limits = range(d$date))
+  growth <- ggplot(filter(d, !is.na(yoy)), aes(date, yoy, colour = country)) +
+    geom_hline(yintercept = 0, colour = csis_colours[["grey"]], linewidth = 0.4) +
+    geom_line(linewidth = 0.7) +
+    scale_colour_manual(values = au_us_colours) +
+    scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1), breaks = seq(-4, 6, 2)) +
+    x_dates +
+    coord_cartesian(ylim = GROWTH_YLIM) +
+    labs(title = paste(measure, "growth"), subtitle = paste0("Annual % change (through the year).", note),
+         x = NULL, y = NULL) +
+    theme_csis()
+  level <- ggplot(d, aes(date, index, colour = country)) +
+    geom_hline(yintercept = 100, colour = csis_colours[["ltgrey"]], linewidth = 0.4, linetype = "dashed") +
+    geom_line(linewidth = 0.7) +
+    scale_colour_manual(values = au_us_colours) +
+    scale_y_continuous(labels = label_number(accuracy = 1)) +
+    x_dates +
+    labs(title = paste(measure, "level"), subtitle = paste0("Index, ", base_year, " = 100."),
+         x = NULL, y = NULL, caption = caption) +
+    theme_csis() +
+    theme(legend.position = "none")
+  growth / level + plot_annotation(title = title, theme = theme_csis())
+}
 
 # 1. Real GDP growth ------------------------------------------------------
 
@@ -185,9 +237,9 @@ p_gdp_au <- gdp_au |>
   scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1)) +
   scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
   labs(title = "Australian real GDP growth",
-       subtitle = "Chain volume measures, seasonally adjusted",
+       subtitle = "Quarterly and through the year",
        x = NULL, y = NULL,
-       caption = "Source: ABS, Australian National Accounts (cat. no. 5206.0).") +
+       caption = "Source: ABS, Australian National Accounts (cat. no. 5206.0). Chain volume measures, seasonally adjusted.") +
   theme_csis()
 
 save_plot(p_gdp_au, "gdp_growth.png")
@@ -205,7 +257,6 @@ stopifnot(n_distinct(gdp$country) == 2)
 # Zoomed in so ordinary booms and busts are visible: the y axis stops at
 # GROWTH_YLIM and the COVID-19 swings, which would flatten everything else,
 # run off the scale (their size is given in the subtitle).
-GROWTH_YLIM <- c(-4.5, 6.5)
 gdp_recent  <- gdp |> filter(date >= as.Date("2000-01-01"))
 off_scale   <- gdp_recent |>
   filter(yoy < GROWTH_YLIM[1] | yoy > GROWTH_YLIM[2]) |>
@@ -226,10 +277,10 @@ p_gdp <- gdp_recent |>
   scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"), date_labels = "%Y") +
   coord_cartesian(ylim = GROWTH_YLIM) +
   labs(title = "Australian and US real GDP growth",
-       subtitle = paste0("Through the year, seasonally adjusted.", off_note),
+       subtitle = paste0("Through the year.", off_note),
        x = NULL, y = NULL,
-       caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0);",
-                       "US BEA.")) +
+       caption = paste0("Sources: ABS, Australian National Accounts (cat. no. 5206.0); US BEA.",
+                        GDP_MEASURE_NOTE)) +
   theme_csis()
 
 save_plot(p_gdp, "gdp_growth_au_us.png")
@@ -252,20 +303,19 @@ p_gdp_idx <- gdp_idx |>
   scale_y_continuous(labels = label_number(accuracy = 1)) +
   scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"), date_labels = "%Y") +
   labs(title = "Real GDP, Australia and the United States",
-       subtitle = paste0("Index, ", gdp_base_year, " = 100. Chain volume / chained dollars, ",
-                         "seasonally adjusted."),
+       subtitle = paste0("Index, ", gdp_base_year, " = 100."),
        x = NULL, y = NULL,
-       caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0);",
-                       "US BEA, National Income and Product Accounts, Table 1.1.6.")) +
+       caption = paste0("Sources: ABS, Australian National Accounts (cat. no. 5206.0); ",
+                        "US BEA, National Income and Product Accounts, Table 1.1.6.", GDP_MEASURE_NOTE)) +
   theme_csis()
 
 save_plot(p_gdp_idx, "gdp_index_au_us.png")
 
 # Growth and level together, for the dashboard's single "GDP" tab
-p_gdp_both <- (p_gdp + labs(title = "Real GDP growth", caption = NULL)) /
-  (p_gdp_idx + labs(title = "Real GDP level") + theme(legend.position = "none")) +
-  plot_annotation(title = "Real GDP, Australia and the United States",
-                  theme = theme_csis())
+p_gdp_both <- growth_and_level(
+  bind_rows(gdp_au, gdp_us), "Real GDP, Australia and the United States", "Real GDP",
+  paste0("Sources: ABS, Australian National Accounts (cat. no. 5206.0); ",
+         "US BEA, National Income and Product Accounts, Table 1.1.6.", GDP_MEASURE_NOTE))
 save_plot(p_gdp_both, "gdp_au_us.png", width = 8, height = 8)
 
 # Australia: ABS A3606058X (output per hour worked)
@@ -291,11 +341,11 @@ p_prod <- prod |>
   scale_y_continuous(labels = label_number(accuracy = 1)) +
   scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
   labs(title = "Labour Productivity, Australia vs. United States",
-       subtitle = paste0("Output per hour worked. Index, ", prod_base_year, " = 100. ",
-                         "Australia: market sector. United States: business sector."),
+       subtitle = paste0("Output per hour worked. Index, ", prod_base_year, " = 100."),
        x = NULL, y = NULL,
        caption = paste("Sources: ABS, Australian System of National Accounts;",
-                       "US Bureau of Labor Statistics, Productivity and Costs.")) +
+                       "US Bureau of Labor Statistics, Productivity and Costs.",
+                       "\nSeasonally adjusted. Australia: market sector; United States: business sector.")) +
   theme_csis()
 
 save_plot(p_prod, "productivity_au_us.png")
@@ -333,16 +383,12 @@ p_prod_lv <- ggplot(prod_lv, aes(year, value, colour = country)) +
 save_plot(p_prod_lv, "productivity_level_au_us.png")
 
 # Growth and level together, for the dashboard's single "Productivity" tab
-p_prod_both <- (p_prod + labs(title = "Labour productivity growth", caption = NULL)) /
-  ((p_prod_lv %+% filter(prod_lv, year >= 2000)) +
-     labs(title = "Labour productivity level",
-                    caption = paste("Sources: ABS, Australian System of National Accounts; US Bureau of Labor Statistics,",
-                                    "Productivity and Costs;
-OECD Productivity Database (GDP per hour worked).",
-                                    "
-PPPs adjust for price differences, so the level is the same in A$ and US$ views.")) +
-     theme(legend.position = "none")) +
-  plot_annotation(title = "Labour productivity, Australia and the United States", theme = theme_csis())
+# (the PPP dollar level above is kept as its own chart)
+p_prod_both <- growth_and_level(
+  prod |> select(date, value, country), "Labour productivity, Australia and the United States",
+  "Labour productivity",
+  paste("Sources: ABS, Australian System of National Accounts; US Bureau of Labor Statistics, Productivity and Costs.",
+        "\nOutput per hour worked, seasonally adjusted. Australia: market sector; United States: business sector."))
 save_plot(p_prod_both, "productivity_both_au_us.png", width = 8, height = 8)
 
 # Real GDP per person. Australia: ABS GDP per capita, chain volume measures,
@@ -368,14 +414,20 @@ p_gdp_pc <- pc_idx |>
   scale_y_continuous(labels = label_number(accuracy = 1)) +
   scale_x_date(breaks = seq(as.Date("2000-01-01"), Sys.Date(), by = "5 years"), date_labels = "%Y") +
   labs(title = "Real GDP per person, Australia and the United States",
-       subtitle = paste0("Index, ", gdp_base_year, " = 100. Chain volume / chained dollars, ",
-                         "seasonally adjusted, quarterly."),
+       subtitle = paste0("Index, ", gdp_base_year, " = 100."),
        x = NULL, y = NULL,
-       caption = paste("Sources: ABS, Australian National Accounts (cat. no. 5206.0), Table 1;",
-                       "US BEA, NIPA Tables 1.1.6 and 2.1 (real GDP over population).")) +
+       caption = paste0("Sources: ABS, Australian National Accounts (cat. no. 5206.0), Table 1; ",
+                        "US BEA, NIPA Tables 1.1.6 and 2.1 (real GDP over population).", GDP_MEASURE_NOTE)) +
   theme_csis()
 
-save_plot(p_gdp_pc, "gdp_per_capita_au_us.png")
+save_plot(p_gdp_pc, "gdp_per_capita_index_au_us.png")
+
+# Growth and level together, for the dashboard's "GDP per person" tab
+p_gdp_pc_both <- growth_and_level(
+  bind_rows(pc_au, pc_us), "Real GDP per person, Australia and the United States", "Real GDP per person",
+  paste0("Sources: ABS, Australian National Accounts (cat. no. 5206.0), Table 1; ",
+         "US BEA, NIPA Tables 1.1.6 and 2.1 (real GDP over population).", GDP_MEASURE_NOTE))
+save_plot(p_gdp_pc_both, "gdp_per_capita_au_us.png", width = 8, height = 8)
 
 
 # 3. GVA by industry ------------------------------------------------------
@@ -478,21 +530,20 @@ p_ind <- ind_share |>
   mutate(group = factor(group, levels = ind_order),
          country = factor(country, levels = c("United States", "Australia"))) |>
   ggplot(aes(share, group, fill = country)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
-  geom_text(aes(label = sprintf("%.1f%%", share)), position = position_dodge(width = 0.8),
+  geom_col(position = position_dodge(width = 0.92), width = 0.9) +
+  geom_text(aes(label = sprintf("%.1f%%", share)), position = position_dodge(width = 0.92),
             hjust = -0.15, size = 2.6, family = "source_sans", colour = csis_colours[["grey"]]) +
   scale_fill_manual(values = au_us_colours, breaks = c("Australia", "United States")) +
   scale_x_continuous(labels = label_percent(scale = 1, accuracy = 1), breaks = seq(0, 30, 2),
                      expand = expansion(mult = c(0, 0.12))) +
   labs(title = "Industry shares of the economy, Australia and the United States",
-       subtitle = sprintf(paste0("Share of value added excluding owner-occupied housing, current prices, %d.\n",
-                                 "Australia: financial year %s; United States: calendar %d."),
-                          ind_yr, au_yr_lab, ind_yr),
+       subtitle = sprintf("Share of value added, %d", ind_yr),
        x = NULL, y = NULL,
        caption = paste0("Source: OECD National Accounts, value added by economic activity (Table 6A, ISIC Rev.4), ",
                         "from ABS and BEA data.\nIndustries are classified by activity in both countries, so ",
                         "government-run schools and hospitals are in Education and Health.\n",
-                        "Owner-occupied housing (imputed rent) is excluded; the 19 groups sum to 100%.")) +
+                        "Owner-occupied housing (imputed rent) is excluded; the 19 groups sum to 100%. Current prices.\n",
+                        sprintf("Australia: financial year %s; United States: calendar %d.", au_yr_lab, ind_yr))) +
   theme_csis() +
   theme_bars
 
@@ -545,10 +596,10 @@ p_contrib <- contrib |>
   scale_y_continuous(labels = label_percent(scale = 1, accuracy = 1)) +
   scale_x_date(date_breaks = "2 years", date_labels = "%Y") +
   labs(title = "Contributions to nominal GVA growth",
-       subtitle = "Through the year, current prices, seasonally adjusted. Navy line shows total.",
+       subtitle = "Through the year. Navy line shows total.",
        x = NULL, y = NULL,
        caption = paste("Source: ABS, Australian National Accounts (cat. no. 5206.0),",
-                       "Table 45. Excludes ownership of dwellings.")) +
+                       "Table 45. Excludes ownership of dwellings. Current prices, seasonally adjusted.")) +
   theme_csis()
 
 save_plot(p_contrib, "gva_p_contrib.png", width = 9, height = 5)
