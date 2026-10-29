@@ -576,6 +576,10 @@ if (length(svc_files) == 0) {
 
 ![](<Investment/iip_by_type_latest.png>){title="Two-way investment by type: direct, portfolio and other"}
 
+### By industry
+
+![](<Investment/iip_direct_by_industry_latest.png>){title="Direct investment by industry, all partner countries"}
+
 # Critical minerals
 
 ```{r}
