@@ -1,0 +1,65 @@
+﻿title,US share of Australian trade mark applications by Nice class
+subtitle,"Standard trade mark applications, 2021–2025. Dashed line = US share across all classes"
+caption,"Source: IP Australia, IP RAPID. Nice classification; class names shortened."
+chart_type,Horizontal bar with reference line
+category_variable,class_label
+category_axis,vertical
+category_axis_label,(none)
+value_variable,share_us
+value_axis,horizontal
+value_axis_label,(none)
+value_units,Percent (values are 0-100)
+value_axis_min,auto
+value_axis_max,auto
+series_variable,(none)
+series_colours,(none)
+layers,"Col (fill=#1f4e79, width=0.7) | Vline (linetype=dashed, colour=grey40, reference_value=11.4)"
+title_style,Bold
+notes,Classes with fewer than 100 applications in the window are omitted. Fractional counts: each application split equally across its Nice classes.
+
+class_label,share_us
+Class 13: Firearms & explosives,27.7
+Class 10: Medical devices,23.9
+Class 42: Scientific & technology services,21
+Class 5: Pharmaceuticals,18.1
+"Class 9: Computers, software & electronics",17.5
+Class 28: Toys & sporting goods,16.9
+Class 1: Chemicals,16.7
+Class 38: Telecommunications,15.7
+Class 4: Industrial oils & fuels,15.3
+Class 3: Cosmetics & cleaning,14
+Class 8: Hand tools,13.9
+Class 2: Paints & coatings,13.3
+Class 17: Rubber & plastics,12.7
+Class 7: Machinery,11.4
+Class 15: Musical instruments,11
+Class 41: Education & entertainment,10.6
+Class 18: Leather goods & bags,10.4
+Class 31: Agricultural produce,10.1
+Class 12: Vehicles,10
+"Class 11: Lighting, heating & appliances",9.9
+Class 40: Treatment of materials,9.7
+Class 25: Clothing & footwear,9.6
+Class 32: Beer & soft drinks,9.5
+Class 26: Haberdashery,8.9
+Class 16: Paper & printed matter,8.9
+Class 36: Financial & insurance services,8.8
+Class 24: Textiles,8.6
+Class 27: Floor coverings,8.5
+Class 35: Advertising & business services,8.4
+Class 21: Housewares,8.1
+Class 14: Jewellery & watches,7.9
+Class 22: Ropes & raw fibres,7.8
+Class 34: Tobacco,7.8
+Class 20: Furniture,7.6
+Class 33: Alcoholic beverages,7.3
+Class 39: Transport & storage,7
+Class 30: Staple foods & confectionery,6.9
+Class 6: Metal goods,6.7
+Class 23: Yarns & threads,6.4
+Class 44: Medical & beauty services,5.9
+Class 45: Legal & security services,5.7
+"Class 29: Meat, dairy & processed food",5.6
+Class 19: Non-metal building materials,5.4
+Class 43: Food & accommodation services,4.9
+Class 37: Construction & repair,3

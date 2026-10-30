@@ -1,0 +1,55 @@
+﻿title,US share of Australian patent applications by technology field
+subtitle,"Standard complete applications, 2019–2023. Dashed line = US share across all fields"
+caption,"Source: IP Australia, IP RAPID. Fields: WIPO technology concordance."
+chart_type,Horizontal bar with reference line
+category_variable,field
+category_axis,vertical
+category_axis_label,(none)
+value_variable,share_us
+value_axis,horizontal
+value_axis_label,(none)
+value_units,Percent (values are 0-100)
+value_axis_min,auto
+value_axis_max,auto
+series_variable,(none)
+series_colours,(none)
+layers,"Col (fill=#1f4e79, width=0.7) | Vline (linetype=dashed, colour=grey40, reference_value=45.5)"
+title_style,Bold
+notes,Fields with fewer than 30 applications in the window are omitted. Reference line = US share across all fields.
+
+field,share_us
+13 medical technology,60.1
+6 computer technology,60
+15 biotechnology,56.8
+11 analysis of biological materials,53.8
+16 pharmaceuticals,51.5
+3 telecommunications,51.4
+7 it methods for management,51.4
+22 micro structure and nano technology,51.2
+5 basic communication processes,51.1
+14 organic fine chemistry,50.5
+26 machine tools,44.9
+12 control,44.6
+9 optics,44.4
+10 measurement,44.1
+4 digital communication,43.1
+28 textile and paper machines,42.3
+17 macromolecular chemistry polymers,40.6
+24 environmental technology,39.2
+19 basic materials chemistry,38.6
+23 chemical engineering,38.5
+29 other special machines,38.5
+2 audio visual technology,38.3
+8 semiconductors,36.4
+32 transport,34.4
+1 electrical machinery apparatus energy,34.2
+33 furniture games,34.2
+35 civil engineering,33.3
+31 mechanical elements,32.7
+25 handling,32.2
+27 engines pumps turbines,31.8
+21 surface technology coating,29
+18 food chemistry,28.7
+34 other consumer goods,25.8
+30 thermal processes and apparatus,23.2
+20 materials metallurgy,22.9

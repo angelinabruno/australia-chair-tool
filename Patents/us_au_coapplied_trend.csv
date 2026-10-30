@@ -1,0 +1,56 @@
+﻿title,Patent applications with both US and Australian applicants
+subtitle,Standard complete applications filed in Australia
+caption,"Source: IP Australia, IP RAPID.
+Years after 2023 are excluded as filings are still being recorded:
+Australian filings can enter the data 30 months or more after the earliest filing (PCT national phase)."
+chart_type,Line with point markers
+category_variable,filing_year
+category_axis,horizontal
+category_axis_label,(none)
+value_variable,n_us_au
+value_axis,vertical
+value_axis_label,Applications
+value_units,Number
+value_axis_min,0
+value_axis_max,auto
+series_variable,(none)
+series_colours,(none)
+layers,"Line (linewidth=0.8, colour=#2a9d8f) | Point (size=1.4, colour=#2a9d8f)"
+title_style,Bold
+notes,Applications with at least one US and one Australian applicant/patentee.
+
+filing_year,n_us_au
+1990,2
+1991,11
+1992,7
+1993,6
+1994,8
+1995,7
+1996,10
+1997,12
+1998,16
+1999,11
+2000,15
+2001,62
+2002,76
+2003,87
+2004,89
+2005,79
+2006,96
+2007,114
+2008,83
+2009,79
+2010,90
+2011,57
+2012,69
+2013,74
+2014,66
+2015,54
+2016,68
+2017,56
+2018,57
+2019,54
+2020,55
+2021,89
+2022,74
+2023,41

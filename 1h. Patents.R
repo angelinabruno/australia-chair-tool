@@ -409,20 +409,12 @@ stopifnot(all(c("party_role_category", "country_code") %in% names(patents_full))
 # phase) after its earliest filing, so the tail is heavily truncated.
 year_min <- 1990L
 year_max <- year(Sys.Date()) - 3L          # last filing year treated as complete
-# The time-series charts run to last year but shade the years after year_max,
-# so readers see the latest filings without mistaking the lag for a fall.
-ts_year_max <- year(Sys.Date()) - 1L
+# The time-series charts end at year_max: the incomplete years after it are
+# left out rather than shown, so the lag cannot be mistaken for a fall.
+ts_year_max <- year_max
 
-shade_incomplete <- function(from = year_max + 1L, to = ts_year_max) list(
-  annotate("rect", xmin = from - 0.5, xmax = to + 0.5, ymin = -Inf, ymax = Inf,
-           fill = "grey88", alpha = 0.6),
-  annotate("text", x = (from + to) / 2, y = Inf, vjust = 1.4, size = 3,
-           colour = "grey35", lineheight = 0.9,
-           label = "Incomplete:
-publication lag")
-)
-LAG_NOTE <- paste0("Shaded years are incomplete: Australian filings can enter the data up to 30 months or more ",
-                   "after the earliest filing (PCT national phase).")
+LAG_NOTE <- paste0("Years after ", year_max, " are excluded as filings are still being recorded:\n",
+                   "Australian filings can enter the data 30 months or more after the earliest filing (PCT national phase).")
 
 # One row per patent: was any applicant/patentee party recorded in the US?
 # Dictionary Table 3/11: party_role_category "applicant" covers party_role
@@ -451,7 +443,6 @@ cat("\n--- US-applicant patents ---\n")
 print(tail(annual_us, 15))
 
 p_count <- ggplot(annual_us, aes(filing_year, n_us)) +
-  shade_incomplete() +
   geom_line(linewidth = 0.8, colour = "#1f4e79") +
   geom_point(size = 1.4, colour = "#1f4e79") +
   scale_x_continuous(breaks = scales::pretty_breaks(8)) +
@@ -468,7 +459,6 @@ p_count <- ggplot(annual_us, aes(filing_year, n_us)) +
         plot.title = element_text(face = "bold"))
 
 p_share <- ggplot(annual_us, aes(filing_year, share_us)) +
-  shade_incomplete() +
   geom_line(linewidth = 0.8, colour = "#a33") +
   geom_point(size = 1.4, colour = "#a33") +
   scale_x_continuous(breaks = scales::pretty_breaks(8)) +
@@ -1042,7 +1032,6 @@ sector_pal <- setNames(rep_len(c("#1f4e79", "#a33", "#2a9d8f", "#e9a23b", "#6c75
                                length(sectors)), sectors)
 
 p_sector_trend <- ggplot(sector_trend, aes(filing_year, n_us, colour = sector)) +
-  shade_incomplete() +
   geom_line(linewidth = 0.8) +
   geom_point(size = 1.2) +
   scale_colour_manual(values = sector_pal) +
@@ -1068,7 +1057,6 @@ fwrite(collab_annual, file.path(out_dir, "us_au_coapplied_annual_full.csv"))
 
 # Chart 3: co-applied patents per year
 p_collab_trend <- ggplot(collab_annual, aes(filing_year, n_us_au)) +
-  shade_incomplete() +
   geom_line(linewidth = 0.8, colour = "#2a9d8f") +
   geom_point(size = 1.4, colour = "#2a9d8f") +
   scale_x_continuous(breaks = scales::pretty_breaks(8)) +

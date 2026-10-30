@@ -1,0 +1,54 @@
+﻿title,Australian trade mark applications with a US applicant
+subtitle,"Standard trade mark applications, by application date"
+caption,"Source: IP Australia, IP RAPID"
+chart_type,Line with point markers
+x_variable,filing_year
+x_axis_label,(none)
+y_variable,n_us
+y_axis_label,Applications
+y_units_format,Count; axis labels shown with thousands separator
+y_axis_min,auto
+y_axis_max,auto
+line_colour,#1f4e79
+line_width_mm,0.8
+point_size,1.4
+title_style,Bold
+notes,""
+
+filing_year,n_us
+1990,3535
+1991,3961
+1992,3743
+1993,4141
+1994,5051
+1995,5099
+1996,4702
+1997,4957
+1998,5267
+1999,6104
+2000,7313
+2001,5357
+2002,4619
+2003,4743
+2004,5392
+2005,6227
+2006,6877
+2007,7546
+2008,6916
+2009,5847
+2010,6874
+2011,7387
+2012,7612
+2013,8145
+2014,7726
+2015,8940
+2016,7938
+2017,9197
+2018,9555
+2019,9442
+2020,9203
+2021,11397
+2022,10845
+2023,9438
+2024,8694
+2025,9077
