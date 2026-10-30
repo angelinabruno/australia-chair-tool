@@ -1,0 +1,54 @@
+﻿title,US share of Australian trade mark applications
+subtitle,Share of applications with a known applicant party
+caption,"Source: IP Australia, IP RAPID"
+chart_type,Line with point markers
+x_variable,filing_year
+x_axis_label,(none)
+y_variable,share_us
+y_axis_label,(none)
+y_units_format,Percent (values are 0-100); axis labels shown as whole-number %
+y_axis_min,0
+y_axis_max,auto
+line_colour,#a33
+line_width_mm,0.8
+point_size,1.4
+title_style,Bold
+notes,Denominator is applications with a known applicant party
+
+filing_year,share_us
+1990,16.1
+1991,18.3
+1992,16
+1993,15.9
+1994,16.8
+1995,15.8
+1996,18.9
+1997,18.4
+1998,17.5
+1999,16.6
+2000,17.1
+2001,14.3
+2002,11.6
+2003,10.7
+2004,10.3
+2005,11.1
+2006,11.4
+2007,12.4
+2008,11.7
+2009,10.3
+2010,11.6
+2011,12
+2012,12.2
+2013,13
+2014,12
+2015,12.3
+2016,11.2
+2017,12.1
+2018,12.4
+2019,12.5
+2020,11.3
+2021,12.9
+2022,13.8
+2023,11.3
+2024,10.2
+2025,9.4

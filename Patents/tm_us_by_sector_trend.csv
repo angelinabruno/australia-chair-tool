@@ -1,0 +1,56 @@
+﻿title,"Australian trade mark applications with a US applicant, by sector"
+subtitle,Standard trade mark applications grouped by Nice class
+caption,"Source: IP Australia, IP RAPID. Multi-class applications split across sectors."
+chart_type,Multi-line with point markers
+category_variable,filing_year
+category_axis,horizontal
+category_axis_label,(none)
+value_variable,n_us
+value_axis,vertical
+value_axis_label,Applications
+value_units,Number
+value_axis_min,auto
+value_axis_max,auto
+series_variable,class_group
+series_colours,"Technology & telecoms=#1f4e79; Health, pharma & beauty=#a33; Chemicals & materials=#2a9d8f; Machinery, vehicles & tools=#e9a23b; Fashion & household=#6c757d; Leisure, media & education=#7b4ea3; Food, drink & hospitality=#8c6d31; Business & financial services=#4ba3c3"
+layers,Line (linewidth=0.8) | Point (size=1.1)
+title_style,Bold
+notes,Sectors are groups of Nice classes defined for this analysis. Fractional counts: each application split equally across its Nice classes.
+
+filing_year,Business & financial services,Chemicals & materials,Fashion & household,"Food, drink & hospitality","Health, pharma & beauty","Leisure, media & education","Machinery, vehicles & tools",Technology & telecoms
+1990,213.2,315.8,570.8,236.2,495,569.3,252.6,882.3
+1991,156.9,288.1,632.9,305.3,673.4,782.6,284.1,837.6
+1992,201.6,371.4,551.4,256.3,710.5,525.6,326.1,800.2
+1993,185.8,349.5,614.4,294.2,747.7,685.4,313.3,950.7
+1994,269.4,370.6,673.9,350,890.9,823.9,359.9,1312.4
+1995,308.1,369.8,636.3,371.2,834.9,856.9,377.2,1344.5
+1996,331.2,334.1,510.4,327.3,884.7,586.3,384,1344.1
+1997,453.6,383.1,555.2,278.8,940,635.2,345.2,1365.9
+1998,550.6,310.8,577.2,319.1,1084.3,639.3,366.7,1419
+1999,806,322.6,508.7,372.7,1131.2,769.3,403.6,1789.8
+2000,1139.3,317.6,565.4,334.8,1083.7,858.1,396.1,2618.2
+2001,581.3,341,472.9,299.7,1229.2,595.2,311.5,1526.1
+2002,473.8,274.1,483.6,364.3,1106.5,604.4,332.8,979.6
+2003,445.8,291.8,544.7,489.4,1078.8,586.2,400,906.3
+2004,480.9,270.8,634.4,444.6,1331.4,737.7,380.7,1111.5
+2005,580.6,372.7,761,512.5,1415.8,794.7,493.3,1296.4
+2006,771.3,378.9,794.5,579.9,1533.4,867.9,546.5,1404.6
+2007,930.5,424.2,841.6,636.7,1579.3,940.3,604.9,1588.5
+2008,926.5,432.3,729.3,597.6,1453.6,829.4,480.2,1467.2
+2009,702.6,337.7,625.1,459.3,1269.5,726.4,487.4,1238.9
+2010,810.8,410.8,877.3,506.3,1458.2,822.3,470.4,1517.8
+2011,887.3,461.4,845.9,600.5,1580.7,847.2,603.3,1560.6
+2012,859.3,414.3,798,665.9,1536.9,940.3,578.7,1818.7
+2013,950.6,419.4,899.1,736.3,1681.1,941.5,633.6,1883.5
+2014,919.3,409.2,831.9,694.9,1493.6,1024.5,599.5,1753.1
+2015,1104.3,407.8,948,734.7,1906.4,993.8,594.9,2250.1
+2016,952,391.7,857.5,784.3,1771,893.2,563.1,1725.2
+2017,1053.7,407.4,1159.8,811.2,1741.4,1170.1,606.6,2246.8
+2018,1272.9,447.1,1071.4,792.4,1951.5,1165.7,611.9,2242.1
+2019,1208.4,393.8,981.2,815,2029.7,1097,661.7,2255.3
+2020,1105.5,379.4,972.2,790.9,2036.8,1055.3,598,2264.9
+2021,1386.2,495.1,1282.3,910.9,2159,1375.9,786.8,3000.6
+2022,1482.9,472.6,1032.9,771.8,2055.7,1339.4,665.6,3024
+2023,1141.2,413.7,1051.5,776,1787.8,1196.6,613.3,2457.8
+2024,987.3,401.5,1073.9,679.7,1682.3,1077.4,621.4,2170.5
+2025,1032.8,373.3,1051.6,677.7,1861.6,1138.9,612.9,2328.2

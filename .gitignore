@@ -115,3 +115,6 @@ Critical minerals/**
 
 # Data behind each chart, written by "0. Chart data.R" (the dashboard embeds them as CSV downloads)
 !*/*_data.csv
+
+# Patents chart data (exported beside each chart; the dashboard embeds them as CSV downloads)
+!/Patents/*.csv

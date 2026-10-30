@@ -1,0 +1,35 @@
+﻿title,Where US and Australian applicants file together
+subtitle,"Co-applied patent applications by technology field, 2019–2023"
+caption,"Source: IP Australia, IP RAPID. Applications split across fields, so counts can be fractional."
+chart_type,Horizontal bar
+category_variable,field
+category_axis,vertical
+category_axis_label,(none)
+value_variable,n_us_au
+value_axis,horizontal
+value_axis_label,Applications
+value_units,Number
+value_axis_min,auto
+value_axis_max,auto
+series_variable,(none)
+series_colours,(none)
+layers,"Col (fill=#2a9d8f, width=0.7)"
+title_style,Bold
+notes,Top 15 fields. Fractional counts.
+
+field,n_us_au
+16 pharmaceuticals,45.8
+35 civil engineering,30.5
+13 medical technology,28.5
+15 biotechnology,26.3
+32 transport,14.9
+6 computer technology,13.7
+10 measurement,13.4
+1 electrical machinery apparatus energy,13.4
+12 control,13
+14 organic fine chemistry,10.5
+31 mechanical elements,10.5
+33 furniture games,9.8
+34 other consumer goods,7.1
+29 other special machines,6.5
+11 analysis of biological materials,6.4

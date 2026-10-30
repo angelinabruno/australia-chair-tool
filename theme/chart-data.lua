@@ -18,8 +18,10 @@ end
 
 local MAX_CSV = 3 * 1024 * 1024   -- larger files are not embedded
 
+-- ASCII letters and digits spelled out: %w follows the system locale and on
+-- Windows can let accented bytes through unencoded, garbling the download
 local function url_encode(s)
-  return (s:gsub("[^%w%-%._~]", function(c) return string.format("%%%02X", string.byte(c)) end))
+  return (s:gsub("[^A-Za-z0-9%-%._~]", function(c) return string.format("%%%02X", string.byte(c)) end))
 end
 
 -- Split one CSV line into fields (handles quoted fields with commas)

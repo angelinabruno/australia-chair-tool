@@ -1,0 +1,56 @@
+﻿title,"Australian patent applications with a US applicant, by technology sector"
+subtitle,Standard complete applications; each application split across its sectors
+caption,"Source: IP Australia, IP RAPID. Sectors: WIPO technology concordance.
+Years after 2023 are excluded as filings are still being recorded:
+Australian filings can enter the data 30 months or more after the earliest filing (PCT national phase)."
+chart_type,Multi-line with point markers
+category_variable,filing_year
+category_axis,horizontal
+category_axis_label,(none)
+value_variable,n_us
+value_axis,vertical
+value_axis_label,Applications
+value_units,Number
+value_axis_min,auto
+value_axis_max,auto
+series_variable,sector
+series_colours,Chemistry=#1f4e79; Electrical engineering=#a33; Instruments=#2a9d8f; Mechanical engineering=#e9a23b; Other fields=#6c757d
+layers,Line (linewidth=0.8) | Point (size=1.2)
+title_style,Bold
+notes,Fractional counts: each application split equally across its sectors.
+
+filing_year,Chemistry,Electrical engineering,Instruments,Mechanical engineering,Other fields
+1990,2901.8,715.8,1000.4,1273,392
+1991,2842.2,622.8,1059.3,1237.9,404.8
+1992,2658.3,630.4,1133.6,1273.2,396.5
+1993,2734.6,593.8,1125.3,1182.7,405.6
+1994,2887.8,705,1175.7,1262.1,396.4
+1995,2961.7,781.3,1303.3,1293.4,417.2
+1996,3545.2,1018.2,1500.3,1409.5,512.8
+1997,3737.9,1163.5,1566.6,1443.6,533.4
+1998,4184.5,1318.8,1714.6,1504,595.1
+1999,4434.3,1572.8,1863.3,1457.4,595.2
+2000,4537.3,1726.4,1985.1,1421.6,599.5
+2001,4573.2,1576.4,2192.6,1482,606.8
+2002,4360.6,1364.4,2231.1,1405.3,598.6
+2003,4783,1660.1,2438.4,1465.1,675.4
+2004,4942.7,1917.4,2543.2,1617.9,697.8
+2005,5184.2,1943.5,2555,1672.8,781.4
+2006,5252.3,1715.1,2651,1516.9,776.8
+2007,4585.3,1779.8,2655.1,1291.4,750.4
+2008,4277.6,1860.7,2346.8,1161.5,864.4
+2009,4226.5,1788.4,2535.1,1294.4,814.7
+2010,4205.9,1970.7,2581.3,1386.3,920.8
+2011,4239.1,2146.6,2828.2,1549.9,1199.2
+2012,4497,2381.8,2834,1456.8,1365.4
+2013,5210.5,2446.7,3098.1,1557,1457.6
+2014,4767.8,2554.4,3147.6,1530.7,1314.5
+2015,4522.1,2592.4,3033.5,1440.3,1196.7
+2016,5185.9,2618.6,2993,1575.2,1116.4
+2017,5246.4,2714.3,3072.5,1660.6,1082.2
+2018,5229.3,2302.7,3165.1,1655.5,904.4
+2019,5559,2545,3269.9,1590,904.1
+2020,6118.9,2862.9,3386.7,1559.7,1012.9
+2021,6307.2,2666.4,3388.1,1660.5,1077.9
+2022,5985.1,2374.7,3037,1534.4,934.8
+2023,5183.7,2119.6,2543.9,1461.1,892.6

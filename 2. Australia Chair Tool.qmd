@@ -183,6 +183,14 @@ cat(paste0(
   ' (Canberra time)</b></div>',
   '</section>',
   '<div class="ov-stats">', paste(stats, collapse = ""), '</div>',
+  '<section class="ov-section ov-about"><h2 class="ov-h2">About this dashboard</h2>',
+  '<p>Washington and Canberra are constantly making decisions that shape US&ndash;Australia economic and strategic ties: ',
+  'on investment screening, critical minerals offtake, data-centre construction, energy policy, research collaboration and ',
+  'defence-industrial integration. The data behind those decisions is public but scattered across more than a dozen ',
+  'government agencies, market operators and international bodies in two countries, published on different cycles, ',
+  'in different units and under different definitions. The US-Australia Economic Dashboard brings it together in one ',
+  'place: a regularly updated view of the relationship, built from official US and Australian data, with the data behind ',
+  'every chart available to download.</p></section>',
   '<section class="ov-section"><h2 class="ov-h2">Explore the relationship</h2>',
   '<p class="ov-sub">Each section opens a page of charts drawn from official US and Australian data.</p>',
   '<div class="ov-grid">', paste(tiles, collapse = ""), '</div></section>',
@@ -730,6 +738,10 @@ map
 
 ![](Energy/06_lcoe_au_us.png){title="Cost of new solar and wind, Australia vs United States"}
 
+### US industrial power prices
+
+![](<Data centres/16_us_industrial_power_prices.png>){title="US benchmark: industrial electricity prices in data centre states"}
+
 # Research and AI {orientation="columns"}
 
 ## Column {.tabset width="50%" title="Australia's research strengths"}
@@ -760,31 +772,45 @@ map
 
 ![](Tech/F_rd_intensity.png){title="Gross domestic expenditure on R&D, % of GDP"}
 
-# Data centres {scrolling="true"}
+# Data centres {orientation="columns"}
 
-## Row {height="640px"}
+## Column {.tabset width="50%" title="Data centres' share of electricity use"}
 
-### Column {.tabset .dc-au width="50%" title="Australia: demand and the grid"}
-
-#### Demand by NEM region
-
-![](<Data centres/10_dc_demand_by_region.png>){title="Data centre electricity demand by NEM region"}
-
-#### Connection pipeline
-
-![](<Data centres/11_dc_connection_pipeline.png>){title="Data centres seeking transmission connections"}
-
-#### Sydney grid capacity
-
-![](<Data centres/13_transgrid_sydney_capacity.png>){title="Sydney data centre connection enquiries and capacity"}
-
-#### Share of electricity use
+### Australia and the US
 
 ![](<Data centres/12_dc_share_of_grid_au_us.png>){title="Data centres' share of electricity use, Australia and the US"}
 
-### Column {.tabset .dc-au width="50%" title="Australia: investment"}
+## Column {.tabset .dc-au width="50%" title="Australia: investment"}
 
-#### Projects and commitments
+### Capex by financial year
+
+![](<Data centres/08_divj_financial_year.png>){title="Information Media & Telecommunications capital expenditure by financial year"}
+
+### Commercial buildings
+
+![](<Data centres/14_commercial_nec_building.png>){title="Commercial buildings n.e.c.: work done and approvals"}
+
+### Computer imports
+
+![](<Data centres/15_computer_imports.png>){title="Imports of computers and parts"}
+
+# Data center archive (to delete) {scrolling="true"}
+
+## Row {.tabset height="680px" title="Data center archive (to delete): charts and tables taken off the Data centres page"}
+
+### Demand by NEM region
+
+![](<Data centres/10_dc_demand_by_region.png>){title="Data centre electricity demand by NEM region"}
+
+### Connection pipeline
+
+![](<Data centres/11_dc_connection_pipeline.png>){title="Data centres seeking transmission connections"}
+
+### Sydney grid capacity
+
+![](<Data centres/13_transgrid_sydney_capacity.png>){title="Sydney data centre connection enquiries and capacity"}
+
+### Projects and commitments
 
 ```{r}
 #| echo: false
@@ -801,27 +827,11 @@ cat('<div class="dc-table"><table><thead><tr><th>Type</th><th>Project or commitm
     'Only figures stated on an official government or company page are included.</p></div>')
 ```
 
-#### Capex by financial year
-
-![](<Data centres/08_divj_financial_year.png>){title="Information Media & Telecommunications capital expenditure by financial year"}
-
-#### Share of national capex
+### Share of national capex
 
 ![](<Data centres/02_divj_share.png>){title="Information Media & Telecommunications share of national capex"}
 
-#### Commercial buildings
-
-![](<Data centres/14_commercial_nec_building.png>){title="Commercial buildings n.e.c.: work done and approvals"}
-
-#### Computer imports
-
-![](<Data centres/15_computer_imports.png>){title="Imports of computers and parts"}
-
-## Row {height="640px"}
-
-### Column {.tabset .dc-au width="50%" title="Australia: costs and policy"}
-
-#### Costs compared
+### Costs compared
 
 ```{r}
 #| echo: false
@@ -840,7 +850,7 @@ cat('<div class="dc-table"><table><thead><tr><th>Measure</th><th>Where / what</t
     'NREL ATB US technology costs, industrial land values (JLL, Knight Frank), grid emissions factors (DCCEEW, EPA eGRID), Turner &amp; Townsend city build costs, LevelTen and DC Byte.</p></div>')
 ```
 
-#### Policy
+### Policy
 
 <div class="dc-text">
 
@@ -852,17 +862,9 @@ Sources: [Clayton Utz](https://www.claytonutz.com/insights/2026/march/great-expe
 
 </div>
 
-### Column {.tabset .dc-us width="50%" title="US benchmarks"}
-
-#### Industrial power prices
-
-![](<Data centres/16_us_industrial_power_prices.png>){title="US benchmark: industrial electricity prices in data centre states"}
-
-#### Generation mix, US data centre states
+### Generation mix, US data centre states
 
 ![](Energy/02_state_fuel_mix.png){title="US benchmark: generation mix in the main data centre states, with Australia"}
-
-## Row {.tabset .dc-au height="640px" title="Australian capex detail (ABS)"}
 
 ### Investment by asset
 
@@ -875,7 +877,6 @@ Sources: [Clayton Utz](https://www.claytonutz.com/insights/2026/march/great-expe
 ### Plans and outturn
 
 ![](<Data centres/06_expected_and_realisation_epm_divj.png>){title="Equipment capex: what firms planned and what they spent"}
-
 
 # Human capital {orientation="columns"}
 

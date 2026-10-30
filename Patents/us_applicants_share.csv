@@ -1,0 +1,56 @@
+﻿title,US share of Australian patent applications
+subtitle,Share of applications with a known applicant party
+caption,"Source: IP Australia, IP RAPID.
+Years after 2023 are excluded as filings are still being recorded:
+Australian filings can enter the data 30 months or more after the earliest filing (PCT national phase)."
+chart_type,Line with point markers
+category_variable,filing_year
+category_axis,horizontal
+category_axis_label,(none)
+value_variable,share_us
+value_axis,vertical
+value_axis_label,(none)
+value_units,Percent (values are 0-100)
+value_axis_min,30
+value_axis_max,auto
+series_variable,(none)
+series_colours,(none)
+layers,"Line (linewidth=0.8, colour=#a33) | Point (size=1.4, colour=#a33)"
+title_style,Bold
+notes,Denominator is applications with a known applicant party
+
+filing_year,share_us
+1990,39.3
+1991,41.8
+1992,42.7
+1993,42.2
+1994,42.8
+1995,42.4
+1996,44.8
+1997,44.6
+1998,44.3
+1999,43.9
+2000,44.3
+2001,45.2
+2002,45.2
+2003,46.6
+2004,46.9
+2005,45.8
+2006,44.8
+2007,43.6
+2008,42.8
+2009,43.8
+2010,43.7
+2011,45.7
+2012,45.8
+2013,47.6
+2014,48.2
+2015,47
+2016,46.4
+2017,45.9
+2018,44.4
+2019,45.5
+2020,46.7
+2021,46.3
+2022,45.1
+2023,42.4

@@ -1,0 +1,35 @@
+﻿title,Where US and Australian applicants register brands together
+subtitle,"Co-applied trade mark applications by Nice class, 2021–2025"
+caption,"Source: IP Australia, IP RAPID. Multi-class applications split across classes."
+chart_type,Horizontal bar
+category_variable,class_label
+category_axis,vertical
+category_axis_label,(none)
+value_variable,n_us_au
+value_axis,horizontal
+value_axis_label,Applications
+value_units,Number
+value_axis_min,auto
+value_axis_max,auto
+series_variable,(none)
+series_colours,(none)
+layers,"Col (fill=#2a9d8f, width=0.7)"
+title_style,Bold
+notes,Top 15 classes. Fractional counts: each application split equally across its Nice classes.
+
+class_label,n_us_au
+Class 31: Agricultural produce,54.1
+"Class 9: Computers, software & electronics",51.7
+Class 5: Pharmaceuticals,30.3
+Class 42: Scientific & technology services,28.4
+Class 25: Clothing & footwear,27
+Class 35: Advertising & business services,24.2
+Class 41: Education & entertainment,21.5
+Class 1: Chemicals,21.1
+Class 28: Toys & sporting goods,19.9
+Class 16: Paper & printed matter,16.1
+Class 30: Staple foods & confectionery,12
+Class 33: Alcoholic beverages,10.3
+Class 3: Cosmetics & cleaning,9.6
+"Class 11: Lighting, heating & appliances",8.3
+Class 36: Financial & insurance services,7.8
