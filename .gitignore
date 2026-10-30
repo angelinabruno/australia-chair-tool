@@ -9,6 +9,7 @@
 !/index.html
 !/theme/navigation.html
 !/theme/page-guides.html
+!/theme/chart-footer.html
 !/editions/*.html
 *.pptx
 .Rhistory

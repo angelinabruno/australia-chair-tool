@@ -7,7 +7,7 @@ format:
     include-after-body:
       - theme/navigation.html   # drop-down menus and the A$/US$ toggle
       - theme/page-guides.html  # "How to read this page" link and pop-up on pages with jargon
-      - theme/chart-footer.html # data date, CSV and chart downloads, and citation under each chart
+      - theme/chart-footer.html # data date, and CSV and chart downloads, under each chart
     nav-buttons: [github]
     scrolling: false
 filters:
