@@ -837,8 +837,8 @@ make_p16 <- function(cur) {
          subtitle = paste0("Average retail price to industrial customers, ", eia_yr, ", ", cur_sym[[cur]], " per MWh"),
          x = NULL, y = NULL,
          caption = paste0("Source: US EIA, Electric Power Annual, Table 2.10 (published in US cents per kWh).",
-                          "\nAll-in retail prices (energy, network and other charges). No comparable official",
-                          "\nseries is published for Australian industrial users.",
+                          "\nAll-in retail prices (energy, network and other charges).",
+                          "\nNo official Australian equivalent is published; see Wholesale prices for an Australia–US comparison.",
                           if (cur == "AUD") fx_note_aud_from_usd else "")) +
     theme(panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "#E6E7E8", linewidth = 0.4))
