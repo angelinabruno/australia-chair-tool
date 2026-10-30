@@ -7,10 +7,12 @@ format:
     include-after-body:
       - theme/navigation.html   # drop-down menus and the A$/US$ toggle
       - theme/page-guides.html  # "How to read this page" link and pop-up on pages with jargon
+      - theme/chart-footer.html # data date, and CSV and chart downloads, under each chart
     nav-buttons: [github]
     scrolling: false
 filters:
   - theme/currency.lua   # attaches each chart's US$ version for the toggle
+  - theme/chart-data.lua # attaches each chart's data (CSV) and latest period
   # - theme/takeaways.lua  # one-line finding under each chart (takeaways.tsv); switched off 26 Oct 2026
 ---
 
@@ -175,7 +177,10 @@ cat(paste0(
   '<div class="ov-kicker">CSIS Australia Chair</div>',
   '<h1 class="ov-title">Australia and the United States</h1>',
   '<p class="ov-lede">An interactive guide to the full breadth of the US&ndash;Australia economic and strategic relationship: trade, investment, critical minerals, energy, technology, human capital and innovation.</p>',
-  '<div class="ov-meta">Updated quarterly &middot; ', edition_stamp(edition), ' &middot; Last updated <b>', trimws(format(Sys.Date(), "%e %B %Y")), '</b></div>',
+  '<div class="ov-meta">Updated quarterly &middot; ', edition_stamp(edition), '</div>',
+  # Time this page was built, Canberra time
+  '<div class="ov-updated">Last updated: <b>', trimws(format(Sys.time(), "%e %B %Y, %l:%M %p", tz = "Australia/Sydney")),
+  ' (Canberra time)</b></div>',
   '</section>',
   '<div class="ov-stats">', paste(stats, collapse = ""), '</div>',
   '<section class="ov-section"><h2 class="ov-h2">Explore the relationship</h2>',

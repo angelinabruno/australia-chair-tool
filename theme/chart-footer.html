@@ -1,0 +1,38 @@
+<!-- Quotable charts: a small grey line under each chart with how recent the
+     data are, a CSV download of the data behind the chart, and the chart
+     image. The data come from theme/chart-data.lua. -->
+<script>
+(function () {
+  function download(href, name) {
+    var a = document.createElement("a");
+    a.href = href; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  // Charts only: images with a title, not the Home page tiles
+  document.querySelectorAll(".card-body img[title]").forEach(function (img) {
+    if (img.closest(".ov-card")) return;
+    var card = img.closest(".card");
+    if (!card || card.querySelector(":scope > .chart-quote")) return;
+    var file = (img.getAttribute("data-csv-name") || "chart").replace(/(_data)?\.csv$/, "");
+
+    var bar = document.createElement("div");
+    bar.className = "chart-quote";
+    var parts = [];
+    if (img.dataset.period) parts.push('<span>Data to ' + img.dataset.period + '</span>');
+    if (img.dataset.csv) parts.push('<button type="button" data-act="csv">Download data (CSV' +
+                                    (img.dataset.usd ? ", A$" : "") + ')</button>');
+    parts.push('<button type="button" data-act="png">Download chart</button>');
+    bar.innerHTML = parts.join('<span class="sep" aria-hidden="true">&middot;</span>');
+
+    bar.addEventListener("click", function (e) {
+      var b = e.target.closest("button");
+      if (!b) return;
+      var act = b.getAttribute("data-act");
+      if (act === "csv") download(img.dataset.csv, file + ".csv");
+      if (act === "png") download(img.src, file + (img.src === img.dataset.usd ? "_usd" : "") + ".png");
+    });
+    card.appendChild(bar);
+  });
+})();
+</script>

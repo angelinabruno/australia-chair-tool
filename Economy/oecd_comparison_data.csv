@@ -1,0 +1,33 @@
+"panel","code","country","year","gdp_usd","rank","is_au","who","country_label","v","layer","pc_ppp"
+"Nominal GDP","PL","Poland","2025","1035491784197.44","15","FALSE","other","15. Poland","1.60564966364342",,
+"Nominal GDP","CH","Switzerland","2025","1043529899250.92","14","FALSE","other","14. Switzerland","1.61811368984711",,
+"Nominal GDP","NL","Netherlands","2025","1332767651100.39","13","FALSE","other","13. Netherlands","2.06661024583865",,
+"Nominal GDP","TR","Türkiye","2025","1597293229287","12","FALSE","other","12. Türkiye","2.47678772104634",,
+"Nominal GDP","MX","Mexico","2025","1832641364775.52","11","FALSE","other","11. Mexico","2.84172219986418",,
+"Nominal GDP","AU","Australia","2025","1842216787984.07","10","TRUE","au","10. Australia","2.85657",,
+"Nominal GDP","KR","Korea","2025","1872374961553.15","9","FALSE","other","9. Korea","2.90333373292988",,
+"Nominal GDP","ES","Spain","2025","1906453309985.88","8","FALSE","other","8. Spain","2.95617614996648",,
+"Nominal GDP","CA","Canada","2025","2319899772425.92","7","FALSE","other","7. Canada","3.5972726641855",,
+"Nominal GDP","IT","Italy","2025","2551556954100.35","6","FALSE","other","6. Italy","3.95648389262071",,
+"Nominal GDP","FR","France","2025","3366315927447.33","5","FALSE","other","5. France","5.21986182711487",,
+"Nominal GDP","GB","United Kingdom","2025","4002587541846.01","4","FALSE","other","4. United Kingdom","6.20647448714376",,
+"Nominal GDP","JP","Japan","2025","4435162999976.94","3","FALSE","other","3. Japan","6.87723271955857",,
+"Nominal GDP","DE","Germany","2025","5050922925047.05","2","FALSE","other","2. Germany","7.83203963513463",,
+"Nominal GDP","US","United States","2025","3.07697e+13","1","FALSE","us","1. United States","47.7119753235905",,
+"Nominal GDP","AU","Australia","2025","1842216787984.07","10","TRUE","au","10. Australia","2.85657","GeomText",
+"Nominal GDP","US","United States","2025","3.07697e+13","1","FALSE","us","1. United States","47.7119753235905","GeomText",
+"GDP per person, purchasing power parity","FI","Finland","2025",,"15",,"other","15. Finland",,,"65884.4876972259"
+"GDP per person, purchasing power parity","CA","Canada","2025",,"14",,"other","14. Canada",,,"66745.8248561648"
+"GDP per person, purchasing power parity","AU","Australia","2025",,"13",,"au","13. Australia",,,"71934.4033931263"
+"GDP per person, purchasing power parity","SE","Sweden","2025",,"12",,"other","12. Sweden",,,"72528.8892631159"
+"GDP per person, purchasing power parity","BE","Belgium","2025",,"11",,"other","11. Belgium",,,"74675.607672673"
+"GDP per person, purchasing power parity","DE","Germany","2025",,"10",,"other","10. Germany",,,"75406.6888111618"
+"GDP per person, purchasing power parity","AT","Austria","2025",,"9",,"other","9. Austria",,,"76777.5421537618"
+"GDP per person, purchasing power parity","DK","Denmark","2025",,"8",,"other","8. Denmark",,,"83218.071525634"
+"GDP per person, purchasing power parity","IS","Iceland","2025",,"7",,"other","7. Iceland",,,"83431.2131434311"
+"GDP per person, purchasing power parity","NL","Netherlands","2025",,"6",,"other","6. Netherlands",,,"87320.1477254029"
+"GDP per person, purchasing power parity","US","United States","2025",,"5",,"us","5. United States",,,"90026.5163005744"
+"GDP per person, purchasing power parity","CH","Switzerland","2025",,"4",,"other","4. Switzerland",,,"102513.347221899"
+"GDP per person, purchasing power parity","NO","Norway","2025",,"3",,"other","3. Norway",,,"104043.666429243"
+"GDP per person, purchasing power parity","IE","Ireland","2025",,"2",,"other","2. Ireland",,,"155089.413131749"
+"GDP per person, purchasing power parity","LU","Luxembourg","2025",,"1",,"other","1. Luxembourg",,,"156542.075847247"

@@ -1,0 +1,7 @@
+"dataset","item","region","value","unit","period","source","url","label","fill"
+"transgrid_sydney","Data centre connection enquiries","Sydney basin","20","GW","2024-2026","Transgrid, Sydney basin network capacity update, 20 August 2026 (more than 20 GW)","https://www.transgrid.com.au/media/d2raj504/20260820-sydney-basin-network-capacity-update.pdf","Connection enquiries
+(more than)","req"
+"transgrid_sydney","Signed connection agreements","Sydney basin","1.5","GW","June 2026","Transgrid, Sydney basin network capacity update, 20 August 2026 (about 1.5 GW in Western Sydney)","https://www.transgrid.com.au/media/d2raj504/20260820-sydney-basin-network-capacity-update.pdf","Signed connection
+agreements","have"
+"transgrid_sydney","Extra capacity from augmentation paid for by data centres","Sydney basin","2","GW","August 2026","Transgrid, New transmission capacity in Sydney to be funded by data centres, 26 August 2026 (up to 2 GW)","https://www.transgrid.com.au/media-publications/news-articles/new-transmission-capacity-in-sydney-to-be-funded-by-data-centres/","Extra capacity if data
+centres pay for upgrades","maybe"
