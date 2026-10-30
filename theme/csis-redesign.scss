@@ -284,3 +284,20 @@ $border-radius:           6px;
 #data-centres .dc-us > .card-header, #data-centres .card.dc-us > .card-header { border-top: 4px solid #D2232A; }
 #data-centres .card-body:has(> p > img), #data-centres .card-body:has(img) { overflow: hidden !important; }
 #data-centres .card-body img { max-height: 540px; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }
+
+// Home page: when the dashboard was last built
+.ov .ov-updated { display: block !important; margin-top: 10px; color: rgba(255, 255, 255, 0.9); font-size: 0.95rem; }
+.ov .ov-updated b { color: #fff; }
+
+// Quotable charts: small grey line under each chart (theme/chart-footer.html)
+.chart-quote {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px;
+  padding: 4px 12px 8px; font-size: 0.72rem; color: #6c757d; line-height: 1.4;
+  flex: 0 0 auto !important;
+}
+.chart-quote button {
+  background: none; border: 0; padding: 0; color: #6c757d; font: inherit;
+  text-decoration: underline; text-decoration-color: rgba(108, 117, 125, 0.4); text-underline-offset: 2px; cursor: pointer;
+}
+.chart-quote button:hover, .chart-quote button:focus-visible { color: $navy; text-decoration-color: currentColor; }
+.chart-quote .sep { color: #adb5bd; }

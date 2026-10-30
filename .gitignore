@@ -111,3 +111,6 @@ Critical minerals/**
 !Investment/*_usd.png
 !Data centres/*_usd.png
 !Energy/*_usd.png
+
+# Data behind each chart, written by "0. Chart data.R" (the dashboard embeds them as CSV downloads)
+!*/*_data.csv

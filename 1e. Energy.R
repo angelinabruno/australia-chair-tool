@@ -30,6 +30,7 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(ggplot2)
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Chart data.R"))   # <chart>_data.csv beside each chart
 library(scales)
 library(forcats)
 library(readr)

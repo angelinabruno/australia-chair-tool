@@ -1,0 +1,3 @@
+"dataset","item","region","value","unit","period","source","url","projects"
+"aemo_qed_pipeline","Application stage","NEM","7.6","GW","Q2 2026","AEMO, Quarterly Energy Dynamics Q2 2026, p. 43 (12 projects)","https://www.aemo.com.au/-/media/files/major-publications/qed/2026/qed-q2-2026.pdf","12"
+"aemo_qed_pipeline","Proponent implementation stage","NEM","1.4","GW","Q2 2026","AEMO, Quarterly Energy Dynamics Q2 2026, p. 43 (5 projects)","https://www.aemo.com.au/-/media/files/major-publications/qed/2026/qed-q2-2026.pdf","5"

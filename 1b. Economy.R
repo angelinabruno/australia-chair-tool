@@ -24,6 +24,7 @@ library(patchwork)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Chart data.R"))   # <chart>_data.csv beside each chart
 library(scales)
 library(showtext)
 
@@ -125,7 +126,20 @@ bea_nipa_q <- function(code) {
 
 # BLS public API, version 1 (no key: up to 10 years per request, 25 requests a
 # day). Quarterly series; returns date (quarter start), value.
+# The keyless BLS API allows 25 requests a day. When it refuses, the same
+# series is read from FRED, which republishes it unchanged.
+BLS_ON_FRED <- c(PRS84006093 = "OPHPBS")
 bls_q <- function(series, from_year = 1995) {
+  tryCatch(bls_api_q(series, from_year), error = function(e) {
+    if (!series %in% names(BLS_ON_FRED)) stop(e)
+    message("BLS unavailable (", conditionMessage(e), "); reading ", BLS_ON_FRED[[series]], " from FRED")
+    d <- utils::read.csv(paste0("https://fred.stlouisfed.org/graph/fredgraph.csv?id=", BLS_ON_FRED[[series]]))
+    d <- data.frame(date = as.Date(d[[1]]), value = suppressWarnings(as.numeric(d[[2]])))
+    d[!is.na(d$value) & d$date >= as.Date(paste0(from_year, "-01-01")), ]
+  })
+}
+
+bls_api_q <- function(series, from_year = 1995) {
   to_year <- as.integer(format(Sys.Date(), "%Y"))
   starts  <- seq(from_year, to_year, by = 10)
   out <- lapply(starts, function(y0) {

@@ -1,0 +1,442 @@
+"group","place","fuel","gwh","share","twh","renew","total","label","layer"
+"Australia
+2025","Australia","Bioenergy","3347.873","0.011674572165273","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Coal","122355.993","0.426675047151473","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Gas","46336.647","0.161583348382177","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Hydro","13483.996","0.0470208650024219","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Oil","4784.621","0.016684743760585","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Rooftop solar","34843.854","0.121506128828435","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Utility solar","21366.266","0.0745076095537136","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","Australia","Wind","40246.976","0.140347685155922","286.766226","0.395056860705765","TRUE","Australia  (287 TWh)",
+"Australia
+2025","NSW","Bioenergy","1038.141","0.0134749994246645","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Coal","42557.421","0.552392424044716","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Gas","2540.717","0.0329783334953878","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Hydro","2681.544","0.0348062583572102","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Oil","576.426","0.00748197019322199","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Rooftop solar","10692.993","0.138794320350455","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Utility solar","9005.375","0.116889153731418","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NSW","Wind","7949.39","0.103182540402926","77.042007","0.407147272266674","FALSE","NSW  (77 TWh)",
+"Australia
+2025","NT","Bioenergy","7.133","0.00136548760235653","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Coal","0","0","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Gas","4252.034","0.813977248254375","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Hydro","0.03","5.74297323295892e-06","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Oil","518.836","0.0993220420098492","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Rooftop solar","311.403","0.0596126364554369","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Utility solar","134.339","0.025716842704749","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","NT","Wind","0","0","5.223775","0.0867007097357754","FALSE","NT  (5.2 TWh)",
+"Australia
+2025","QLD","Bioenergy","1340.06","0.0177234007043255","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Coal","42738.05","0.565246022918003","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Gas","8080.456","0.106870706954667","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Hydro","1525.26","0.020172823723027","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Oil","1160.692","0.0153511107042259","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Rooftop solar","9460.359","0.125121064253669","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Utility solar","6972.816","0.0922212527838546","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","QLD","Wind","4331.95","0.0572936179582279","75.609643","0.312532159423104","FALSE","QLD  (76 TWh)",
+"Australia
+2025","SA","Bioenergy","82.998","0.0053287120943685","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Coal","0","0","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Gas","3314.967","0.212830486822965","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Hydro","4.644","0.000298158256418797","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Oil","261.692","0.016801384676733","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Rooftop solar","3612.11","0.231907928422244","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Utility solar","1176.502","0.0755348374231756","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","SA","Wind","7122.708","0.457298492304095","15.575621","0.770368128500302","FALSE","SA  (16 TWh)",
+"Australia
+2025","TAS","Bioenergy","34.715","0.00368757257767431","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Coal","0","0","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Gas","215.961","0.0229402811881642","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Hydro","6762.927","0.718386407893222","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Oil","14.959","0.00158900758143252","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Rooftop solar","428.113","0.0454759544561683","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Utility solar","16.494","0.00175206170520409","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","TAS","Wind","1940.883","0.206168714598135","9.414052","0.975470711230403","FALSE","TAS  (9.4 TWh)",
+"Australia
+2025","VIC","Bioenergy","623.585","0.0106431287427643","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Coal","29623.274","0.505599587809495","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Gas","1746.818","0.0298140732445106","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Hydro","2437","0.0415938560839608","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Oil","267.02","0.00455740313973706","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Rooftop solar","6424.397","0.109649341093242","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Utility solar","2873.103","0.0490371082053328","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","VIC","Wind","14595.187","0.249105501680958","58.590384","0.460028935806258","FALSE","VIC  (59 TWh)",
+"Australia
+2025","WA","Bioenergy","221.241","0.0048827492216857","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Coal","7437.248","0.164138730540377","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Gas","26185.694","0.577913573875547","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Hydro","72.591","0.0016020703610605","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Oil","1984.996","0.0438085059914267","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Rooftop solar","3914.479","0.0863918500212665","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Utility solar","1187.637","0.0262109357551048","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Australia
+2025","WA","Wind","4306.858","0.0950515842335319","45.310744","0.214139189592649","FALSE","WA  (45 TWh)",
+"Main US data
+centre states
+2024","Arizona","Bioenergy","184.425","0.00151630354982097","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Coal","9814.665","0.080694110775674","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Gas","55089.93","0.452937814387361","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Hydro","5313.826","0.0436891594248664","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Nuclear","32388.118","0.266288292234895","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Oil","29.939","0.000246152159295595","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Other","0","0","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Rooftop solar","5446","0.0447758662454929","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Utility solar","10820.663","0.0889652146851917","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","Arizona","Wind","2540.455","0.0208870865374024","121.628021","0.199833630442774","FALSE","Arizona  (122 TWh)",
+"Main US data
+centre states
+2024","California","Bioenergy","4749.892","0.019224589902348","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Coal","245.554","0.000993848902013174","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Gas","86655.675","0.350727935411195","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Geothermal","10524.488","0.0425965402439008","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Hydro","29453.931","0.119211077743884","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Nuclear","18378.835","0.0743860209364592","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Oil","56.586","0.000229024711343808","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Other","1208.861","0.0048927127130348","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Rooftop solar","31724","0.128398896240607","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Utility solar","48427.6","0.196004614411222","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","California","Wind","15648.353","0.0633347387839928","247.073775","0.568770457325955","FALSE","California  (247 TWh)",
+"Main US data
+centre states
+2024","Georgia","Bioenergy","5366.138","0.0380217609394441","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Coal","17836.88","0.126383180467135","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Gas","56936.526","0.403423650359801","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Hydro","2941.17","0.0208396546309962","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Nuclear","47975.859","0.33993286079532","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Oil","240.895","0.00170686107988788","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Other","83.2","0.000589513447131205","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Rooftop solar","568","0.00402456295637649","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Georgia","Utility solar","9184.669","0.0650779553239076","141.133337","0.127963933850724","FALSE","Georgia  (141 TWh)",
+"Main US data
+centre states
+2024","Illinois","Bioenergy","224.361","0.00120144304254402","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Coal","26965.456","0.144398801486118","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Gas","30137.333","0.161384059857472","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Hydro","74.896","0.000401064704268464","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Nuclear","99211.858","0.531275027887936","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Oil","20.747","0.000111099249885946","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Other","410.53","0.00219836964648756","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Rooftop solar","1730","0.00926407202500057","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Utility solar","3057.409","0.016372287390685","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Illinois","Wind","24910.345","0.133393774709603","186.742935","0.160632641872101","FALSE","Illinois  (187 TWh)",
+"Main US data
+centre states
+2024","Ohio","Bioenergy","291.89","0.00203755958983993","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Coal","30079.964","0.209975398644146","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Gas","85136.664","0.594302737949844","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Hydro","467.543","0.00326371826137425","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Nuclear","17946.987","0.12528026129906","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Oil","1142.839","0.00797767160263482","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Other","857.55","0.00598619077826316","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Rooftop solar","508","0.00354613132220592","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Utility solar","4001.558","0.0279331696091017","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Ohio","Wind","2821.711","0.0196971609435295","143.254706","0.0564777397260513","FALSE","Ohio  (143 TWh)",
+"Main US data
+centre states
+2024","Oregon","Bioenergy","1086.992","0.0166514170529137","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Gas","24925.82","0.38183374321601","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Geothermal","168.873","0.00258693233434717","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Hydro","26932.746","0.412577448616175","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Oil","13.076","0.000200308676957972","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Other","13.361","0.000204674536007606","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Rooftop solar","618","0.00946702067604975","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Utility solar","2001.404","0.0306591149662276","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Oregon","Wind","9518.977","0.145819339925311","65.279249","0.617761273571024","FALSE","Oregon  (65 TWh)",
+"Main US data
+centre states
+2024","Texas","Bioenergy","916.446","0.00160330312851826","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Coal","65545.244","0.114670034857147","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Gas","293193.469","0.512935847948292","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Hydro","776.742","0.00135889389953312","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Nuclear","38613.118","0.0675528431475991","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Oil","229.506","0.00040151595163677","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Other","2531.717","0.00442918599308945","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Rooftop solar","4956","0.00867041844793527","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Utility solar","40558.964","0.0709570600675428","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","Texas","Wind","124277.504","0.217420896558706","571.59871","0.300010572102236","FALSE","Texas  (572 TWh)",
+"Main US data
+centre states
+2024","United States","Bioenergy","46421.669","0.0105542072355975","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Coal","652155.921","0.148271031361582","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Gas","1869902.146","0.425131952045337","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Geothermal","15407.14","0.00350289319558639","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Hydro","242896.054","0.05522367777481","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Nuclear","781865.31","0.177761133751238","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Oil","15084.453","0.00342952863236414","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Other","19015.196","0.00432320344211461","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Rooftop solar","83918","0.0190791925813109","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Utility solar","219833.913","0.049980380395507","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","United States","Wind","451904.357","0.102742799584553","4398.404159","0.241083150767364","TRUE","United States  (4,398 TWh)",
+"Main US data
+centre states
+2024","Virginia","Bioenergy","3387.566","0.0321781955087409","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Coal","1972.109","0.0187328922791608","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Gas","60998.078","0.579415450368031","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Hydro","1253.138","0.0119034491323365","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Nuclear","28945.327","0.274949149705257","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Oil","204.685","0.00194428505531896","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Other","421.672","0.00400542574124366","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Rooftop solar","1044","0.00991686541638614","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Utility solar","6998.366","0.0664768714143799","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Main US data
+centre states
+2024","Virginia","Wind","50.26","0.00047741537914518","105.275201","0.120952796850989","FALSE","Virginia  (105 TWh)",
+"Australia
+2025",,,,,,"0.395056860705765",,"Australia  (287 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.407147272266674",,"NSW  (77 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.0867007097357754",,"NT  (5.2 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.312532159423104",,"QLD  (76 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.770368128500302",,"SA  (16 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.975470711230403",,"TAS  (9.4 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.460028935806258",,"VIC  (59 TWh)","GeomText"
+"Australia
+2025",,,,,,"0.214139189592649",,"WA  (45 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.199833630442774",,"Arizona  (122 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.568770457325955",,"California  (247 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.127963933850724",,"Georgia  (141 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.160632641872101",,"Illinois  (187 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.0564777397260513",,"Ohio  (143 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.617761273571024",,"Oregon  (65 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.300010572102236",,"Texas  (572 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.241083150767364",,"United States  (4,398 TWh)","GeomText"
+"Main US data
+centre states
+2024",,,,,,"0.120952796850989",,"Virginia  (105 TWh)","GeomText"

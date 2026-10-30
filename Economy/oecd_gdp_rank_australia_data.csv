@@ -1,0 +1,18 @@
+"code","country","year","gdp_usd","rank","is_au","who","country_label","v","layer"
+"PL","Poland","2025","1035491784197.44","15","FALSE","other","15. Poland","1.60564966364342",
+"CH","Switzerland","2025","1043529899250.92","14","FALSE","other","14. Switzerland","1.61811368984711",
+"NL","Netherlands","2025","1332767651100.39","13","FALSE","other","13. Netherlands","2.06661024583865",
+"TR","Türkiye","2025","1597293229287","12","FALSE","other","12. Türkiye","2.47678772104634",
+"MX","Mexico","2025","1832641364775.52","11","FALSE","other","11. Mexico","2.84172219986418",
+"AU","Australia","2025","1842216787984.07","10","TRUE","au","10. Australia","2.85657",
+"KR","Korea","2025","1872374961553.15","9","FALSE","other","9. Korea","2.90333373292988",
+"ES","Spain","2025","1906453309985.88","8","FALSE","other","8. Spain","2.95617614996648",
+"CA","Canada","2025","2319899772425.92","7","FALSE","other","7. Canada","3.5972726641855",
+"IT","Italy","2025","2551556954100.35","6","FALSE","other","6. Italy","3.95648389262071",
+"FR","France","2025","3366315927447.33","5","FALSE","other","5. France","5.21986182711487",
+"GB","United Kingdom","2025","4002587541846.01","4","FALSE","other","4. United Kingdom","6.20647448714376",
+"JP","Japan","2025","4435162999976.94","3","FALSE","other","3. Japan","6.87723271955857",
+"DE","Germany","2025","5050922925047.05","2","FALSE","other","2. Germany","7.83203963513463",
+"US","United States","2025","3.07697e+13","1","FALSE","us","1. United States","47.7119753235905",
+"AU","Australia","2025","1842216787984.07","10","TRUE","au","10. Australia","2.85657","GeomText"
+"US","United States","2025","3.07697e+13","1","FALSE","us","1. United States","47.7119753235905","GeomText"

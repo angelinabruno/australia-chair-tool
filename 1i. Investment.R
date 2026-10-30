@@ -26,6 +26,7 @@ library(httr2)
 library(readxl)
 library(dplyr)
 library(ggplot2)
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Chart data.R"))   # <chart>_data.csv beside each chart
 library(scales)
 
 DASHBOARD_DIR <- Sys.getenv("DASHBOARD_DIR")

@@ -1,0 +1,5 @@
+"dataset","item","region","value","unit","period","source","url"
+"aemo_qed_demand","Average data centre demand","New South Wales","334","MW","Q2 2025","AEMO, Quarterly Energy Dynamics Q2 2026, section 2.1 (451 MW, +35% year on year; Q2 2025 = 451 / 1.35)","https://www.aemo.com.au/-/media/files/major-publications/qed/2026/qed-q2-2026.pdf"
+"aemo_qed_demand","Average data centre demand","New South Wales","451","MW","Q2 2026","AEMO, Quarterly Energy Dynamics Q2 2026, section 2.1","https://www.aemo.com.au/-/media/files/major-publications/qed/2026/qed-q2-2026.pdf"
+"aemo_qed_demand","Average data centre demand","Victoria","104","MW","Q2 2025","AEMO, Quarterly Energy Dynamics Q2 2026, section 2.1","https://www.aemo.com.au/-/media/files/major-publications/qed/2026/qed-q2-2026.pdf"
+"aemo_qed_demand","Average data centre demand","Victoria","204","MW","Q2 2026","AEMO, Quarterly Energy Dynamics Q2 2026, section 2.1","https://www.aemo.com.au/-/media/files/major-publications/qed/2026/qed-q2-2026.pdf"

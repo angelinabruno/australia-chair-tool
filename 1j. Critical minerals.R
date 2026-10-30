@@ -36,6 +36,7 @@ library(tidyr)
 library(stringr)
 library(readr)
 library(ggplot2)
+source(file.path(Sys.getenv("DASHBOARD_DIR"), "0. Chart data.R"))   # <chart>_data.csv beside each chart
 library(scales)
 library(showtext)
 library(sysfonts)
