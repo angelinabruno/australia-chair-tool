@@ -306,4 +306,4 @@ $border-radius:           6px;
 #data-center-archive-to-delete .card-body img { max-height: 560px; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; }
 
 // Home page: "About this dashboard" paragraph under the headline numbers
-.ov .ov-about p { max-width: 80ch; font-size: 1.02rem; line-height: 1.6; color: $ink; margin: 0; }
+.ov .ov-about p { max-width: none; font-size: 1.02rem; line-height: 1.6; color: $ink; margin: 0; }
